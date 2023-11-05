@@ -24,3 +24,10 @@ a940-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+* something from MacOS
+.DS_Store
+
+/junk/
+*.junk
+junk*
