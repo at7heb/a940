@@ -3,8 +3,9 @@ defmodule Run do
     args |> parse_args |> process
   end
 
-  def process([]) do
+  def process({[], [], []}) do
     IO.puts "No arguments given"
+    IO.puts "use ./a940 --start=<address> --org=<address> out=<outfile> <sourcefile>"
   end
 
   def process({parm_list, arg_list, []}) do

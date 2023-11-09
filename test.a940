@@ -1,0 +1,3 @@
+ LDA a
+ HLT
+a DATA 88

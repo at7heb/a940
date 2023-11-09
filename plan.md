@@ -1,7 +1,10 @@
 # Assembler Plan
+
 Keep it simple.
+
 ## Formats
-```
+
+``` code
 * comment line
 <label> <statement>
 or
@@ -31,7 +34,7 @@ statement: <ws> <end>
 <data-defining>: DATA 
 <string-defining>: STRING
 <string>: quoted string with \nnn escapes
-<origin definition>: ORG
-<start definition>: START
-<end>: END
+<origin definition>: ORG ### DEFERRED
+<start definition>: START ### DEFERRED
+<end>: END ###DEFERRED
 ```
