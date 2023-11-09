@@ -5,6 +5,8 @@ defmodule A940.OpcodeMap do
 
   def opcode_map() do
     %{
+      "DATA" => {nil, :number_data},
+      "STRING" => {nil, :string_data},
       "STA" => {0o35_00000, :mem_addr},
       "STB" => {0o36_00000, :mem_addr},
       "STX" => {0o37_00000, :mem_addr},
@@ -24,7 +26,7 @@ defmodule A940.OpcodeMap do
       "ETR" => {0o14_00000, :mem_addr},
       "MRG" => {0o16_00000, :mem_addr},
       "EOR" => {0o17_00000, :mem_addr},
-      "RCH" => {0o46_00000, :reg_op},
+      "RCH" => {0o46_00000, :reg_op_addr},
       "CLA" => {0o46_00001, :reg_op},
       "CLB" => {0o46_00002, :reg_op},
       "CLAB" => {0o46_00003, :reg_op},
@@ -71,6 +73,9 @@ defmodule A940.OpcodeMap do
       "ROV" => {0o02_20001, :no_addr},
       "REO" => {0o02_20010, :no_addr},
       "OVT" => {0o40_20001, :no_addr},
+
+      #SYSPOPs defined by time sharing system
+
       "BIO" => {0o576_00000, :mem_addr},
       "BRS" => {0o573_00000, :mem_addr},
       "CIO" => {0o561_00000, :mem_addr},
@@ -106,6 +111,7 @@ defmodule A940.OpcodeMap do
       "WCH" => {0o564_00000, :mem_addr},
       "WCI" => {0o557_00000, :mem_addr},
       "WIO" => {0o560_00000, :mem_addr},
+
       # POPs
       "POP00" => {0o10000000, :mem_addr},
       "POP01" => {0o10100000, :mem_addr},
