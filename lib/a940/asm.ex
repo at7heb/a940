@@ -134,10 +134,10 @@ defmodule A940.Asm do
   end
 
   def match_opcode(opcode, address, om) do
-    {val, type} = Map.get(om, opcode)
+    {val, type} = Map.get(om, opcode) |> dbg
     cond do
       type in [:number_data, :mem_addr, :reg_op_addr, :shift_op] -> 1
-      type == [:string_data] -> string_length_in_words(address)
+      type == :string_data -> string_length_in_words(address)
       true -> {:error, "opcode #{opcode} has illegal address"}
     end
   end

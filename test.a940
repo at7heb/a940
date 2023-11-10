@@ -1,3 +1,4 @@
  LDA a
  HLT
+b STRING "400 days and nights\077"
 a DATA 88
