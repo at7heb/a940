@@ -1,4 +1,9 @@
  LDA a
+ LDB a
+ LDX a
+ BRS 999
+ EAX b 
+ BRS 999
  HLT
 b STRING "400 days and nights\077"
 a DATA 88

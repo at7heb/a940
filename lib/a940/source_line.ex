@@ -2,14 +2,14 @@ defmodule A940.SourceLine do
   require Record
 
   Record.defrecord(:sourceline,
-    text: "a lda 5000B",
-    linenumber: 1,
-    label: "a",
-    opcode: "lda",
-    address: "5000",
-    type: :ys_label_ys_address,
-    location: 1024,
-    inhalt: [0o07605000]
+    text: "",
+    linenumber: 0,
+    label: "",
+    opcode: "",
+    address: "",
+    type: :yslabelysaddress,
+    location: -1,
+    inhalt: []
   )
 
   @type sourceline ::
