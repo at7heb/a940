@@ -32,7 +32,7 @@ defmodule A940.Asm do
     numbers = 1..length(src)
     src1 = Enum.zip(numbers, src)
     src2 = Enum.reduce(src1, %{}, fn {num, inhalt} = _line, acc -> Map.put(acc, num, inhalt) end)
-    %{s | source: src2, linecount: length(src)}
+    %{s | source: src2, line_count: length(src)}
   end
 
   def build_symbol_table(%__MODULE__{source: src, line_count: lc} = s) do
@@ -52,7 +52,7 @@ defmodule A940.Asm do
     # in the case of a pseudo op that generates no code (DEFERRED),
     # it can be [], so the location can be incremented by
     # length(content)
-    data_list = Enum.map(1..lc, &(decode_for_data(&1, Map.get(src, &1), om)))
+    data_list = Enum.map(1..lc, &(decode_for_data(&1, Map.get(src, &1), om))) |> dbg
     # data_list is a list of lists. hd(data_list) corresponds to
     # source line 1 and is the data for line 1
     # must start addresses at org, then for lines 2..last
@@ -75,8 +75,92 @@ defmodule A940.Asm do
     {:error, "not written"}
   end
 
-  def decode_for_data(source_line_number, source_line, om) do
-    # puts in map source_line_number =>
+  def decode_for_data(_source_line_number, {_data, line} = _source_line, om) do
+    if String.starts_with?(line, "*") or 0 == String.length(line) do
+      0
+    else
+      # returns the list of words created by this statement.
+      no_label_no_addr = ~r/^[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]*$/
+      no_label_ys_addr = ~r/^[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<address>.+)$/
+      ys_label_no_addr = ~r/^(?<label>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]*$/
+      ys_label_ys_addr = ~r/^(?<label>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<address>.+)$/
+      patterns = [no_label_no_addr, no_label_ys_addr, ys_label_no_addr,ys_label_ys_addr]
+      Enum.map(patterns, &(Regex.match?(&1, line)))
+      |> decode_for_data(line, om, patterns)
+      |> dbg
+      [1]
+    end
+  end
+
+  # no label, no address
+  def decode_for_data([true, false, false, false], stmt, om, patterns) do
+    {_label, opcode, _address} = parse_statement(Enum.at(patterns, 0), stmt)
+    match_opcode(opcode, om)
+  end
+
+  # no label, yes address
+  def decode_for_data([false, true, false, false], stmt, om, patterns) do
+    {_label, opcode, address} = parse_statement(Enum.at(patterns, 1), stmt)
+    match_opcode(opcode, address, om)
+  end
+
+  # yes label, no address
+  def decode_for_data([false, false, true, false], stmt, om, patterns) do
+    {_label, opcode, _address} = parse_statement(Enum.at(patterns, 2), stmt)
+    match_opcode(opcode, om)
+  end
+
+  # yes label, yes address
+  def decode_for_data([false, false, false, true], stmt, om, patterns) do
+    {_label, opcode, address} = parse_statement(Enum.at(patterns, 3), stmt)
+    match_opcode(opcode, address, om)
+  end
+
+  def parse_statement(pattern, stmt) do
+    match_results = Regex.named_captures(pattern, stmt)
+    {
+      Map.get(match_results, "label"),
+      Map.get(match_results, "opcode"),
+      Map.get(match_results, "address")
+    }
+  end
+
+  def match_opcode(opcode, om) do
+    {val, type} = Map.get(om, opcode)
+    cond do
+      type in [:reg_op, :no_addr] -> 1 # statement takes one word
+      true -> {:error, "opcode #{opcode} requires address"}
+    end
+  end
+
+  def match_opcode(opcode, address, om) do
+    {val, type} = Map.get(om, opcode)
+    cond do
+      type in [:number_data, :mem_addr, :reg_op_addr, :shift_op] -> 1
+      type == [:string_data] -> string_length_in_words(address)
+      true -> {:error, "opcode #{opcode} has illegal address"}
+    end
+  end
+
+  def string_length_in_words(address) do
+    v = Regex.named_captures(~r/^"(?<string>[^"]+)"$/, address)
+    s = Map.get(v, "string")
+    s1 = convert_escapes(s)
+    div(2 + String.length(s1), 3)
+  end
+
+  def convert_escapes(s) do
+    # the .* is greedy, so must convert from right to left
+    v = Regex.named_captures(~r/^(?<initial>.*)\\(?<code>[0-3][0-7]{2})(?<final>.*)$/, s)
+    cond do
+      v == nil -> s
+      true -> (
+        # initial part may have \nnn codes
+        (Map.get(v, "initial") |> convert_escapes())
+        <> List.to_string([String.to_integer(Map.get(v, "code"),8)])
+        <> Map.get(v, "final")
+      )
+    end
   end
 
   def xxx do
