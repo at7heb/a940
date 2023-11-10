@@ -8,27 +8,31 @@ defmodule A940.Asm do
     # args: tuples like {:origin, ##}, {:start, ##}, {:out, "a-file"}
     # parms: list of input file names
     {args, parms} |> dbg
-    s = (
+
+    s =
       %__MODULE__{}
       |> assigns(parms)
       |> read_source(args)
       |> build_symbol_table()
-    )
+
     s |> dbg
   end
 
   def assigns(%__MODULE__{} = s, parm_list) when is_list(parm_list) and length(parm_list) == 3 do
-    assigns = Enum.reduce(parm_list, %{}, fn {key, val} = _parm, acc -> add_assign(acc, key, val) end)
+    assigns =
+      Enum.reduce(parm_list, %{}, fn {key, val} = _parm, acc -> add_assign(acc, key, val) end)
+
     %{s | assigns: assigns}
   end
 
   def read_source(%__MODULE__{} = s, [file_name] = _args) do
     {:ok, inhalt} = File.read(file_name)
-    src = (
+
+    src =
       inhalt
       |> String.split("\n")
-      |> Enum.map(&({nil, String.trim_trailing(&1)}))
-    )
+      |> Enum.map(&{nil, String.trim_trailing(&1)})
+
     numbers = 1..length(src)
     src1 = Enum.zip(numbers, src)
     src2 = Enum.reduce(src1, %{}, fn {num, inhalt} = _line, acc -> Map.put(acc, num, inhalt) end)
@@ -42,7 +46,11 @@ defmodule A940.Asm do
   end
 
   def add_assign(map, key, val) when is_atom(key) and is_map(map) do
-    if key in [:org, :start, :out] do Map.put(map, key, val) else {:error, "illegal parameter"} end
+    if key in [:org, :start, :out] do
+      Map.put(map, key, val)
+    else
+      {:error, "illegal parameter"}
+    end
   end
 
   def pass1_0(src, lc, org, om) do
@@ -52,7 +60,7 @@ defmodule A940.Asm do
     # in the case of a pseudo op that generates no code (DEFERRED),
     # it can be [], so the location can be incremented by
     # length(content)
-    data_list = Enum.map(1..lc, &(decode_for_data(&1, Map.get(src, &1), om))) |> dbg
+    data_list = Enum.map(1..lc, &decode_for_data(&1, Map.get(src, &1), om)) |> dbg
     # data_list is a list of lists. hd(data_list) corresponds to
     # source line 1 and is the data for line 1
     # must start addresses at org, then for lines 2..last
@@ -60,15 +68,15 @@ defmodule A940.Asm do
 
     # must
 
-
-    rv = Enum.reduce(Enum.zip(2..lc, tl(data_list)),
-      %{1 => {org, hd(data_list)}},
-      fn {line_number, data} = _dl, map ->
-        {prev_loc, prev_data} = Map.get(map, line_number - 1)
-        Map.put(map, line_number, {prev_loc + length(prev_data), data})
-      end
-    )
-
+    rv =
+      Enum.reduce(
+        Enum.zip(2..lc, tl(data_list)),
+        %{1 => {org, hd(data_list)}},
+        fn {line_number, data} = _dl, map ->
+          {prev_loc, prev_data} = Map.get(map, line_number - 1)
+          Map.put(map, line_number, {prev_loc + length(prev_data), data})
+        end
+      )
   end
 
   def pass1_5(src, code) do
@@ -81,13 +89,22 @@ defmodule A940.Asm do
     else
       # returns the list of words created by this statement.
       no_label_no_addr = ~r/^[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]*$/
-      no_label_ys_addr = ~r/^[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<address>.+)$/
-      ys_label_no_addr = ~r/^(?<label>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]*$/
-      ys_label_ys_addr = ~r/^(?<label>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<address>.+)$/
-      patterns = [no_label_no_addr, no_label_ys_addr, ys_label_no_addr,ys_label_ys_addr]
-      Enum.map(patterns, &(Regex.match?(&1, line)))
+
+      no_label_ys_addr =
+        ~r/^[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<address>.+)$/
+
+      ys_label_no_addr =
+        ~r/^(?<label>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]*$/
+
+      ys_label_ys_addr =
+        ~r/^(?<label>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<address>.+)$/
+
+      patterns = [no_label_no_addr, no_label_ys_addr, ys_label_no_addr, ys_label_ys_addr]
+
+      Enum.map(patterns, &Regex.match?(&1, line))
       |> decode_for_data(line, om, patterns)
       |> dbg
+
       [1]
     end
   end
@@ -118,6 +135,7 @@ defmodule A940.Asm do
 
   def parse_statement(pattern, stmt) do
     match_results = Regex.named_captures(pattern, stmt)
+
     {
       Map.get(match_results, "label"),
       Map.get(match_results, "opcode"),
@@ -127,14 +145,17 @@ defmodule A940.Asm do
 
   def match_opcode(opcode, om) do
     {val, type} = Map.get(om, opcode)
+
     cond do
-      type in [:reg_op, :no_addr] -> 1 # statement takes one word
+      # statement takes one word
+      type in [:reg_op, :no_addr] -> 1
       true -> {:error, "opcode #{opcode} requires address"}
     end
   end
 
   def match_opcode(opcode, address, om) do
     {val, type} = Map.get(om, opcode) |> dbg
+
     cond do
       type in [:number_data, :mem_addr, :reg_op_addr, :shift_op] -> 1
       type == :string_data -> string_length_in_words(address)
@@ -152,18 +173,19 @@ defmodule A940.Asm do
   def convert_escapes(s) do
     # the .* is greedy, so must convert from right to left
     v = Regex.named_captures(~r/^(?<initial>.*)\\(?<code>[0-3][0-7]{2})(?<final>.*)$/, s)
+
     cond do
-      v == nil -> s
-      true -> (
+      v == nil ->
+        s
+
+      true ->
         # initial part may have \nnn codes
-        (Map.get(v, "initial") |> convert_escapes())
-        <> List.to_string([String.to_integer(Map.get(v, "code"),8)])
-        <> Map.get(v, "final")
-      )
+        (Map.get(v, "initial") |> convert_escapes()) <>
+          List.to_string([String.to_integer(Map.get(v, "code"), 8)]) <>
+          Map.get(v, "final")
     end
   end
 
   def xxx do
-
   end
 end

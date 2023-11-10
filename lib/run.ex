@@ -4,17 +4,18 @@ defmodule Run do
   end
 
   def process({[], [], []}) do
-    IO.puts "No arguments given"
-    IO.puts "use ./a940 --start=<address> --org=<address> out=<outfile> <sourcefile>"
+    IO.puts("No arguments given")
+    IO.puts("use ./a940 --start=<address> --org=<address> out=<outfile> <sourcefile>")
   end
 
   def process({parm_list, arg_list, []}) do
     # IO.inspect({"o0", o0})
-    A940.Asm.run(arg_list, parm_list)    # IO.puts "Hello #{options}"
+    # IO.puts "Hello #{options}"
+    A940.Asm.run(arg_list, parm_list)
   end
 
   def process({_, _, errors}) do
-    IO.puts "errors in argument list"
+    IO.puts("errors in argument list")
     IO.inspect(errors)
   end
 
@@ -24,5 +25,4 @@ defmodule Run do
     OptionParser.parse(args, strict: [start: :integer, org: :integer, out: :string]) |> dbg
     # {options, second, third}
   end
-
 end

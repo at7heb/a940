@@ -74,7 +74,7 @@ defmodule A940.OpcodeMap do
       "REO" => {0o02_20010, :no_addr},
       "OVT" => {0o40_20001, :no_addr},
 
-      #SYSPOPs defined by time sharing system
+      # SYSPOPs defined by time sharing system
 
       "BIO" => {0o576_00000, :mem_addr},
       "BRS" => {0o573_00000, :mem_addr},
