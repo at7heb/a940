@@ -9,7 +9,7 @@ defmodule A940.SourceLine do
     address: "",
     type: :yslabelysaddress,
     location: -1,
-    inhalt: []
+    inhalt: {:type, [0]}
   )
 
   @type sourceline ::
