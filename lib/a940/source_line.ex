@@ -7,6 +7,8 @@ defmodule A940.SourceLine do
     label: "",
     opcode: "",
     address: "",
+    indirect: false,
+    indexed: false,
     type: :yslabelysaddress,
     location: -1,
     inhalt: {:type, [0]}
@@ -20,8 +22,10 @@ defmodule A940.SourceLine do
             label: String.t(),
             opcode: String.t(),
             address: String.t(),
+            indirect: Atom.t(),
+            indexed: Atom.t(),
             type: Atom.t(),
             location: Integer.t(),
-            inhalt: []
+            inhalt: Tuple.t()
           )
 end
