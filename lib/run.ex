@@ -20,9 +20,8 @@ defmodule Run do
   end
 
   defp parse_args(args) do
-    args |> dbg
     # {options, second, third} = OptionParser.parse(args)
-    OptionParser.parse(args, strict: [start: :integer, org: :integer, out: :string]) |> dbg
+    OptionParser.parse(args, strict: [start: :integer, org: :integer, out: :string])
     # {options, second, third}
   end
 end

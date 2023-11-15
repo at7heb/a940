@@ -12,7 +12,7 @@ defmodule A940.Asm do
   def run(args, parms) do
     # args: tuples like {:origin, ##}, {:start, ##}, {:out, "a-file"}
     # parms: list of input file names
-    {args, parms} |> dbg
+    {args, parms}
 
     rv =
       %__MODULE__{}
@@ -90,26 +90,22 @@ defmodule A940.Asm do
   def set_addresses(%__MODULE__{source: src_lines, syms: symbol_table} = s) do
     new_source_lines =
       Enum.map(src_lines, fn src_line -> update_address_in_line(src_line, symbol_table) end)
-      |> dbg
 
-    # |> dbg
     %{s | source: new_source_lines}
   end
 
   def update_address_in_line(src_line, symbol_table) do
-    src_line |> dbg
     indirect_val = if SourceLine.sourceline(src_line, :indirect), do: 0o20000000, else: 0
     indexed_val = if SourceLine.sourceline(src_line, :indexed), do: 0o40000, else: 0
     mem_reference_mask = 0o37777
     shift_mask = if indirect_val > 0, do: 0o37777, else: 0o777
-    {instruction_type, data} = SourceLine.sourceline(src_line, :inhalt) |> dbg
+    {instruction_type, data} = SourceLine.sourceline(src_line, :inhalt)
     line_type = SourceLine.sourceline(src_line, :type)
     address_line_types = [:nolabelysaddr, :yslabelysaddr]
     no_change_types = [:no_addr, :string_data, :number_data, :reg_op, :reg_op_addr, :error, nil]
     instruction_types_for_address = [:mem_addr, :shift_op]
 
     address =
-      (
       cond do
         line_type in address_line_types and instruction_type in instruction_types_for_address ->
           evaluate_address(SourceLine.sourceline(src_line, :address), symbol_table)
@@ -117,20 +113,19 @@ defmodule A940.Asm do
         true ->
           0
       end
-    ) |> dbg
 
     new_data =
       cond do
         instruction_type == :mem_addr and line_type in address_line_types ->
-          [hd(data) ||| (address &&& mem_reference_mask) ||| indirect_val ||| indexed_val] |> dbg
+          [hd(data) ||| (address &&& mem_reference_mask) ||| indirect_val ||| indexed_val]
 
         instruction_type == :shift_op and line_type in address_line_types and indirect_val == 0 ->
           [hd(data) ||| (address &&& shift_mask) ||| indexed_val]
 
-          instruction_type == :shift_op and line_type in address_line_types and indirect_val != 0 ->
-            [hd(data) ||| (address &&& mem_reference_mask) ||| indexed_val ||| indirect_val]
+        instruction_type == :shift_op and line_type in address_line_types and indirect_val != 0 ->
+          [hd(data) ||| (address &&& mem_reference_mask) ||| indexed_val ||| indirect_val]
 
-            instruction_type in no_change_types ->
+        instruction_type in no_change_types ->
           data
 
         true ->
@@ -139,7 +134,6 @@ defmodule A940.Asm do
           [:illegal]
       end
 
-    # |> dbg
     SourceLine.sourceline(src_line, inhalt: {instruction_type, new_data})
   end
 
@@ -295,7 +289,6 @@ defmodule A940.Asm do
   end
 
   def create_symbol_table_entry(src_line, symbol_table) do
-    # src_line |> dbg
     type = SourceLine.sourceline(src_line, :type)
     location = SourceLine.sourceline(src_line, :location)
 
@@ -310,8 +303,8 @@ defmodule A940.Asm do
 
   def evaluate_address(address_field, symbol_table) do
     # eventually use [{:abacus, "~> 0.4.2"}]
-    value_if_number = hd(data_value(address_field)) |> dbg
-    value_if_symbol = Map.get(symbol_table, address_field) |> dbg
+    value_if_number = hd(data_value(address_field))
+    value_if_symbol = Map.get(symbol_table, address_field)
 
     cond do
       :error != value_if_number -> value_if_number
