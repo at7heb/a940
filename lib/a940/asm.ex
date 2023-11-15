@@ -2,6 +2,7 @@ defmodule A940.Asm do
   require Record
   alias A940.SourceLine
   require SourceLine
+  import Bitwise
 
   defstruct [:source, syms: %{}, assigns: %{}, ok: true]
   # source is a list of /A940.SourceLine sourceline/s.
@@ -68,6 +69,7 @@ defmodule A940.Asm do
           update_src_line_location(src_line, source_lines, address)
         end
       )
+
     # new_src_lines are in reverse order here...
 
     symbol_table =
@@ -85,8 +87,60 @@ defmodule A940.Asm do
     %{s | syms: symbol_table, source: Enum.reverse(new_src_lines), assigns: new_assigns}
   end
 
-  def set_addresses(%__MODULE__{} = s) do
-    s
+  def set_addresses(%__MODULE__{source: src_lines, syms: symbol_table} = s) do
+    new_source_lines =
+      Enum.map(src_lines, fn src_line -> update_address_in_line(src_line, symbol_table) end)
+      |> dbg
+
+    # |> dbg
+    %{s | source: new_source_lines}
+  end
+
+  def update_address_in_line(src_line, symbol_table) do
+    src_line |> dbg
+    indirect_val = if SourceLine.sourceline(src_line, :indirect), do: 0o20000000, else: 0
+    indexed_val = if SourceLine.sourceline(src_line, :indexed), do: 0o40000, else: 0
+    mem_reference_mask = 0o37777
+    shift_mask = if indirect_val > 0, do: 0o37777, else: 0o777
+    {instruction_type, data} = SourceLine.sourceline(src_line, :inhalt) |> dbg
+    line_type = SourceLine.sourceline(src_line, :type)
+    address_line_types = [:nolabelysaddr, :yslabelysaddr]
+    no_change_types = [:no_addr, :string_data, :number_data, :reg_op, :reg_op_addr, :error, nil]
+    instruction_types_for_address = [:mem_addr, :shift_op]
+
+    address =
+      (
+      cond do
+        line_type in address_line_types and instruction_type in instruction_types_for_address ->
+          evaluate_address(SourceLine.sourceline(src_line, :address), symbol_table)
+
+        true ->
+          0
+      end
+    ) |> dbg
+
+    new_data =
+      cond do
+        instruction_type == :mem_addr and line_type in address_line_types ->
+          [hd(data) ||| (address &&& mem_reference_mask) ||| indirect_val ||| indexed_val] |> dbg
+
+        instruction_type == :shift_op and line_type in address_line_types and indirect_val == 0 ->
+          [hd(data) ||| (address &&& shift_mask) ||| indexed_val]
+
+          instruction_type == :shift_op and line_type in address_line_types and indirect_val != 0 ->
+            [hd(data) ||| (address &&& mem_reference_mask) ||| indexed_val ||| indirect_val]
+
+            instruction_type in no_change_types ->
+          data
+
+        true ->
+          IO.puts("WTD?")
+          src_line |> dbg
+          [:illegal]
+      end
+
+    # |> dbg
+    SourceLine.sourceline(src_line, inhalt: {instruction_type, new_data})
   end
 
   def create_output(%__MODULE__{} = s) do
@@ -100,16 +154,17 @@ defmodule A940.Asm do
       SourceLine.sourceline(src_line, type: :comment, inhalt: {nil, []})
     else
       # returns the list of words created by this statement.
-      no_label_no_addr = ~r/^[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]*$/
+      no_label_no_addr =
+        ~r/^[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)(?<indirect>\*{0,1})[[:blank:]]*$/
 
       no_label_ys_addr =
-        ~r/^[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<address>.+)$/
+        ~r/^[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)(?<indirect>\*{0,1})[[:blank:]]+(?<address>.+?)(?<indexed>(,2){0,1})$/
 
       ys_label_no_addr =
-        ~r/^(?<label>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]*$/
+        ~r/^(?<label>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)(?<indirect>\*{0,1})[[:blank:]]*$/
 
       ys_label_ys_addr =
-        ~r/^(?<label>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<address>.+)$/
+        ~r/^(?<label>[A-Za-z][[:alnum:]]*)[[:blank:]]+(?<opcode>[A-Za-z][[:alnum:]]*)(?<indirect>\*{0,1})[[:blank:]]+(?<address>.+?)(?<indexed>(,2){0,1})$/
 
       patterns = [no_label_no_addr, no_label_ys_addr, ys_label_no_addr, ys_label_ys_addr]
 
@@ -135,11 +190,20 @@ defmodule A940.Asm do
         [false, false, false, true] == match_vector -> {:yslabelysaddr, 3}
       end
 
-    {l, o, a} =
+    {l, o, a, i, x} =
       parse_statement(Enum.at(patterns, pattern_index), SourceLine.sourceline(src_line, :text))
 
     data = match_opcode(o, a, om)
-    SourceLine.sourceline(src_line, label: l, opcode: o, address: a, type: type, inhalt: data)
+
+    SourceLine.sourceline(src_line,
+      label: l,
+      opcode: o,
+      address: a,
+      indirect: i,
+      indexed: x,
+      type: type,
+      inhalt: data
+    )
   end
 
   def parse_statement(pattern, stmt) do
@@ -148,7 +212,9 @@ defmodule A940.Asm do
     {
       Map.get(match_results, "label", ""),
       Map.get(match_results, "opcode", ""),
-      Map.get(match_results, "address", "")
+      Map.get(match_results, "address", ""),
+      Map.get(match_results, "indirect", "") != "",
+      Map.get(match_results, "indexed", "") != ""
     }
   end
 
@@ -168,7 +234,7 @@ defmodule A940.Asm do
     [
       cond do
         String.match?(a, ~r/([0-7]+B)|([0-9a-fA-f]+X)|([0-9]+)/) == false ->
-          -2
+          :error
 
         String.ends_with?(a, ["B", "b"]) ->
           a |> String.slice(0..(String.length(a) - 2)) |> String.to_integer(8)
@@ -239,6 +305,18 @@ defmodule A940.Asm do
 
       true ->
         symbol_table
+    end
+  end
+
+  def evaluate_address(address_field, symbol_table) do
+    # eventually use [{:abacus, "~> 0.4.2"}]
+    value_if_number = hd(data_value(address_field)) |> dbg
+    value_if_symbol = Map.get(symbol_table, address_field) |> dbg
+
+    cond do
+      :error != value_if_number -> value_if_number
+      nil != value_if_symbol -> value_if_symbol
+      true -> {:error, "cannot evaluate '#{address_field}'"}
     end
   end
 end
