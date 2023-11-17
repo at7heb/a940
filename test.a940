@@ -1,4 +1,28 @@
  LDA a
+ LDA* a
+ LDA a,2
+ LDA* a,2
+ LDB a
+* this is a comment
+ LDX a
+ LSH 1
+ LCY 5
+ RSH 1
+ RCY 5
+ BRS 999
+ EAX b 
+ BRS 999
+ LDB* a
+ LDB a,2
+ LDB* a,2
+ RCH 37777B
  HLT
+
+* a blank line precedes and follows
+
 b STRING "400 days and nights\077"
 a DATA 88
+c DATA 12525253B
+d DATA 100X
+ CAB d
+* ERROR
