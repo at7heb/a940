@@ -102,8 +102,8 @@ defmodule A940.Asm do
     {instruction_type, data} = SourceLine.sourceline(src_line, :inhalt)
     line_type = SourceLine.sourceline(src_line, :type)
     address_line_types = [:nolabelysaddr, :yslabelysaddr]
-    no_change_types = [:no_addr, :string_data, :number_data, :reg_op, :reg_op_addr, :error, nil]
-    instruction_types_for_address = [:mem_addr, :shift_op]
+    no_change_types = [:no_addr, :string_data, :number_data, :reg_op, :error, nil]
+    instruction_types_for_address = [:mem_addr, :shift_op, :reg_op_addr]
 
     address =
       cond do
@@ -125,6 +125,10 @@ defmodule A940.Asm do
         instruction_type == :shift_op and line_type in address_line_types and indirect_val != 0 ->
           [hd(data) ||| (address &&& mem_reference_mask) ||| indexed_val ||| indirect_val]
 
+        instruction_type == :reg_op_addr and line_type in address_line_types and indirect_val == 0 and
+            indexed_val == 0 ->
+          [hd(data) ||| (address &&& mem_reference_mask)]
+
         instruction_type in no_change_types ->
           data
 
@@ -138,7 +142,74 @@ defmodule A940.Asm do
   end
 
   def create_output(%__MODULE__{} = s) do
+    s |> create_binary_output |> create_listing_output()
+  end
+
+  def create_binary_output(%__MODULE__{assigns: assigns, source: src_lines} = s) do
+    # make it binary
+    {:ok, file} = File.open(Map.get(assigns, :out), [:write, :binary])
+
+    [Map.get(assigns, :org), Map.get(assigns, :end), Map.get(assigns, :start)]
+    |> binary_output_data(file)
+
+    Enum.map(src_lines, &SourceLine.sourceline(&1, :inhalt))
+    |> Enum.map(fn {_, data} -> binary_output_data(data, file) end)
+
+    File.close(file)
     s
+  end
+
+  def binary_output_data(datalist, file) when is_list(datalist) do
+    Enum.map(datalist, &binary_output_data(&1, file))
+  end
+
+  def binary_output_data(datum, file) when is_integer(datum) do
+    <<a::8, b::8, c::8>> = <<datum::24>>
+    IO.binwrite(file, [a, b, c])
+  end
+
+  def create_listing_output(%__MODULE__{source: src_lines} = s) do
+    Enum.each(src_lines, &output_1_line_listing(&1))
+    s
+  end
+
+  def output_1_line_listing(line) do
+    # these fields
+    # text: String.t()
+    # label: String.t(),
+    # opcode: String.t(),
+    # address: String.t(),
+    # indirect: Atom.t(),
+    # indexed: Atom.t(),
+    # location: Integer.t(),
+    # inhalt: Tuple.t()
+    {_, data_words} = SourceLine.sourceline(line, :inhalt)
+
+    [
+      octal_str(SourceLine.sourceline(line, :location), 5),
+      " ",
+      first_inhalt(data_words),
+      " ",
+      SourceLine.sourceline(line, :text)
+    ]
+    |> IO.puts()
+
+    subsequent_inhalt(data_words, SourceLine.sourceline(line, :location)) |> IO.write()
+  end
+
+  def octal_str(num, width), do: Integer.to_string(num, 8) |> String.pad_leading(width, "0")
+
+  def first_inhalt([]), do: String.duplicate(" ", 8)
+  def first_inhalt(l), do: octal_str(hd(l), 8)
+
+  def subsequent_inhalt([], _), do: []
+  def subsequent_inhalt(l, _) when length(l) == 1, do: []
+
+  def subsequent_inhalt([_ | t] = _l, loc) do
+    locs = (loc + 1)..(loc + length(t))
+
+    Enum.zip(locs, t)
+    |> Enum.map(fn {loc, datum} -> [octal_str(loc, 5), " ", octal_str(datum, 8), "\n"] end)
   end
 
   def analyze_one_line(src_line, om) do
