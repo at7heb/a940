@@ -4,6 +4,9 @@ defmodule A940.Asm do
   require SourceLine
   import Bitwise
 
+  @indirect_bit 0o40000
+  @indexed_bit 0o20000000
+
   defstruct [:source, syms: %{}, assigns: %{}, ok: true]
   # source is a list of /A940.SourceLine sourceline/s.
   # where n is the line number, location is the word address for this line
@@ -95,8 +98,8 @@ defmodule A940.Asm do
   end
 
   def update_address_in_line(src_line, symbol_table) do
-    indirect_val = if SourceLine.sourceline(src_line, :indirect), do: 0o40000, else: 0
-    indexed_val = if SourceLine.sourceline(src_line, :indexed), do: 0o20000000, else: 0
+    indirect_val = if SourceLine.sourceline(src_line, :indirect), do: @indirect_bit, else: 0
+    indexed_val = if SourceLine.sourceline(src_line, :indexed), do: @indexed_bit, else: 0
     mem_reference_mask = 0o37777
     shift_mask = if indirect_val > 0, do: 0o37777, else: 0o777
     {instruction_type, data} = SourceLine.sourceline(src_line, :inhalt)
