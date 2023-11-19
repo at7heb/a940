@@ -1,4 +1,8 @@
 defmodule Run do
+  import Bitwise
+
+  @address_mask 0o37777
+
   # to decode a binary place file: ./a940 --decode=junk
   # to assemble, ./a940 --start=1024 --org=1024 --out=junk test.a940
   def main(args) do
@@ -13,7 +17,7 @@ defmodule Run do
   def process({parm_list, arg_list, []}) do
     # IO.inspect({"o0", o0})
     # IO.puts "Hello #{options}"
-    {parm_list, arg_list} |> dbg
+    # {parm_list, arg_list} |> dbg
 
     if length(parm_list) == 1 do
       disasm(parm_list)
@@ -39,14 +43,43 @@ defmodule Run do
   def disasm([decode: filename] = _parmlist) do
     {:ok, file} = File.open(filename, [:read, :binary])
     data = IO.binread(file, :eof)
-    dis_list(data)
+    dis_list(data, %{type: :start_address, address: 0})
   end
 
-  def dis_list(<<>>), do: nil
+  def dis_list(<<>>, _), do: nil
 
-  def dis_list(<<word::24, rest::binary>>) do
+  def dis_list(<<word::24, rest::binary>>, mem) do
     # word = c + 256 * (b + 256 * a)
-    Integer.to_string(word, 8) |> String.pad_leading(8, "0") |> IO.puts()
-    dis_list(rest)
+    mem = handle_word(word, mem)
+    dis_list(rest, mem)
+  end
+
+  def handle_word(word, %{type: :start_address} = mem) do
+    word = word &&& @address_mask
+    ["First: ", Integer.to_string(word, 8) |> String.pad_leading(8, " ")] |> IO.puts()
+    %{mem | type: :end_address, address: word}
+  end
+
+  def handle_word(word, %{type: :end_address} = mem) do
+    word = word &&& @address_mask
+    ["Last:  ", Integer.to_string(word, 8) |> String.pad_leading(8, " ")] |> IO.puts()
+    %{mem | type: :launch_address}
+  end
+
+  def handle_word(word, %{type: :launch_address} = mem) do
+    word = word &&& @address_mask
+    ["Launch:", Integer.to_string(word, 8) |> String.pad_leading(8, " "), "\n"] |> IO.puts()
+    %{mem | type: :memory}
+  end
+
+  def handle_word(word, %{type: :memory, address: address} = mem) do
+    [
+      Integer.to_string(address, 8) |> String.pad_leading(5, " "),
+      ": ",
+      Integer.to_string(word, 8) |> String.pad_leading(8, "0")
+    ]
+    |> IO.puts()
+
+    %{mem | address: address + 1 &&& @address_mask}
   end
 end
