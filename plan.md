@@ -50,5 +50,13 @@ BNf Expressions
 
 Except modify factor:
 ```
-<factor> ::= -<factor> | ( <exp> ) | <value>
+<factor> ::= -<factor> | +<factor> | ( <exp> ) | <value>
 <value> ::= <symbol> | <int> | <chars_6_bit> | <chars_8_bit>
+```
+
+Need to add lexical analysis:
+1. recognize decimal, octal, hex, and binary integers. No signs.
+2. recognize symbols. Is case important? Should that be a flag?
+3. recognize operators
+4. recognize 6 bit character literals: 'a', 'ab', 'abc', or 'abcd'. Spaces are allowed.
+5. recognize 8 bit character literals: "a", "ab", "abc". Spaces are allowed.
