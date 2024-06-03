@@ -38,3 +38,17 @@ statement: <ws> <end>
 <start definition>: START ### DEFERRED
 <end>: END ###DEFERRED
 ```
+BNf Expressions
+```
+<exp> ::= <exp> + <term> | <exp> - <term> | <term>
+<term> ::= <term> * <power> | <term> / <power> | <power>
+<power> ::= <factor> ^ <power> | <factor>
+<factor> ::= ( <exp> ) | <int>
+<int> ::= <digit> <int> | <digit>
+<digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+```
+
+Except modify factor:
+```
+<factor> ::= -<factor> | ( <exp> ) | <value>
+<value> ::= <symbol> | <int> | <chars_6_bit> | <chars_8_bit>
