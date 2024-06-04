@@ -38,8 +38,8 @@ statement: <ws> <end>
 <start definition>: START ### DEFERRED
 <end>: END ###DEFERRED
 ```
-BNf Expressions
-```
+BNF Expressions
+``` bnf
 <exp> ::= <exp> + <term> | <exp> - <term> | <term>
 <term> ::= <term> * <power> | <term> / <power> | <power>
 <power> ::= <factor> ^ <power> | <factor>
@@ -51,7 +51,7 @@ BNf Expressions
 Except modify factor:
 ```
 <factor> ::= -<factor> | +<factor> | ( <exp> ) | <value>
-<value> ::= <symbol> | <int> | <chars_6_bit> | <chars_8_bit>
+<value> ::= <symbol> | <int> | <chars_6_bit> | <chars_8_bit> | <literal>
 ```
 
 Need to add lexical analysis:
@@ -60,3 +60,4 @@ Need to add lexical analysis:
 3. recognize operators
 4. recognize 6 bit character literals: 'a', 'ab', 'abc', or 'abcd'. Spaces are allowed.
 5. recognize 8 bit character literals: "a", "ab", "abc". Spaces are allowed.
+6. problem: * can be current location or can be multiply operator.
