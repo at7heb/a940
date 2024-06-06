@@ -47,6 +47,7 @@ BNF Expressions
 <int> ::= <digit> <int> | <digit>
 <digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 ```
+These were copied from https://athena.ecs.csus.edu/~gordonvs/135/resources/04bnfParseTrees.pdf
 
 Except modify factor:
 ```
