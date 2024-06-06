@@ -38,7 +38,9 @@ statement: <ws> <end>
 <start definition>: START ### DEFERRED
 <end>: END ###DEFERRED
 ```
+
 BNF Expressions
+
 ``` bnf
 <exp> ::= <exp> + <term> | <exp> - <term> | <term>
 <term> ::= <term> * <power> | <term> / <power> | <power>
@@ -48,16 +50,28 @@ BNF Expressions
 <digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 ```
 
+These were copied from <https://athena.ecs.csus.edu/~gordonvs/135/resources/04bnfParseTrees.pdf>
+
 Except modify factor:
+
 ```
 <factor> ::= -<factor> | +<factor> | ( <exp> ) | <value>
 <value> ::= <symbol> | <int> | <chars_6_bit> | <chars_8_bit> | <literal>
 ```
 
-Need to add lexical analysis:
+## Lexical Analysis
+
 1. recognize decimal, octal, hex, and binary integers. No signs.
 2. recognize symbols. Is case important? Should that be a flag?
 3. recognize operators
 4. recognize 6 bit character literals: 'a', 'ab', 'abc', or 'abcd'. Spaces are allowed.
 5. recognize 8 bit character literals: "a", "ab", "abc". Spaces are allowed.
 6. problem: * can be current location or can be multiply operator.
+
+## Character Translation
+
+The 940 software uses a character set where the code for the space is 0. All input output must ```SUB =40B; ETR =177B``` on input. On output, ```ADD =40B; ETR=177B```.
+
+On the other hand, The assemly source is in normal ASCII, and so the assembler will use ascii.
+
+Additionally, the ```ASC``` directive will translate the characters as for input/output, as above. The same is true for ```='abcd'```, excep that must use ```ETR =77B```
