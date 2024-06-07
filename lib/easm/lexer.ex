@@ -64,7 +64,7 @@ defmodule Easm.Lexer do
         tokens(rest_of_line, [token | token_list])
 
       true ->
-        tokens("", [{:unknown, line} | token_list])
+        tokens("", [{:unknown, line} | token_list] |> dbg)
     end
   end
 
