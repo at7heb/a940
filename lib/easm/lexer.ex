@@ -19,7 +19,21 @@ defmodule Easm.Lexer do
 
   def tokens("", token_list), do: Enum.reverse(token_list)
 
+  def tokens(_, [{:asterisk, "*"}] = tokens),
+    do: IO.inspect(hd(tokens), label: "asterisk short circuit")
+
   def tokens(line, token_list) do
+    white_space_count =
+      Enum.filter(token_list, fn {type, _string} = _ -> type == :white_space end) |> length()
+
+    if white_space_count >= 3 do
+      [{:comment, line} | token_list]
+    else
+      tokens_no_short_circuit(line, token_list)
+    end
+  end
+
+  def tokens_no_short_circuit(line, token_list) do
     cond do
       false != match_operator(line) ->
         {true, token, rest_of_line} = match_operator(line)
@@ -43,6 +57,10 @@ defmodule Easm.Lexer do
 
       false != match_asterisk(line) ->
         {true, token, rest_of_line} = match_asterisk(line)
+        tokens(rest_of_line, [token | token_list])
+
+      false != match_quoted(line) ->
+        {true, token, rest_of_line} = match_quoted(line)
         tokens(rest_of_line, [token | token_list])
 
       true ->
@@ -81,6 +99,13 @@ defmodule Easm.Lexer do
   def match_number(line) when is_binary(line) do
     case Regex.run(~r{^([0-9]+D?)(.*)$}, line, capture: :all_but_first) do
       [token, rest] -> {true, {:number, token}, rest}
+      _ -> false
+    end
+  end
+
+  def match_quoted(line) when is_binary(line) do
+    case Regex.run(~r{^('[^']+')(.*)$}, line, capture: :all_but_first) do
+      [token, rest] -> {true, {:quoted, token}, rest}
       _ -> false
     end
   end

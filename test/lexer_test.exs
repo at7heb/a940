@@ -40,7 +40,12 @@ defmodule LexerTest do
   end
 
   test "analyze" do
-    Lexer.analyze("1BASIC IDENT") |> dbg()
-    Lexer.analyze("1Z EQU *-*") |> dbg()
+    # Lexer.analyze("1BASIC IDENT") |> dbg()
+    # Lexer.analyze("1Z EQU *-*") |> dbg()
+  end
+
+  test "quoted string" do
+    assert {true, {:quoted, "'ABCD'"}, ",2"} = Lexer.match_quoted("'ABCD',2")
+    assert false == Lexer.match_quoted("NEW LDA =55")
   end
 end
