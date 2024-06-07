@@ -10,8 +10,8 @@ defmodule Easm.ProcessAssemblerFile do
           |> String.trim_trailing("\r")
           |> String.trim_leading("\r"))
       )
-      |> Enum.take(15)
 
-    _tokens = Easm.Lexer.analyze(inhalt) |> IO.inspect()
+    _tokens = Easm.Lexer.analyze(inhalt)
+    :ok
   end
 end
