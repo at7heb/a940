@@ -1,17 +1,24 @@
 defmodule Easm.ProcessAssemblerFile do
+  alias Easm.ADotOut
+  alias Easm.LexicalLine
+
   def process(filepath) do
-    inhalt =
+    lines =
       File.read!(filepath)
       |> String.upcase()
       |> String.replace("\t", " ")
+      |> String.replace("\r", "")
       |> String.split("\n")
-      |> Enum.map(
-        &(String.trim_trailing(&1, "\n")
-          |> String.trim_trailing("\r")
-          |> String.trim_leading("\r"))
-      )
+      |> dbg
+      |> Enum.map(&String.trim_trailing(&1, "\n"))
+      |> Easm.Lexer.analyze()
+      |> Enum.map(fn line_map -> LexicalLine.new(line_map) end)
+      |> dbg
 
-    _tokens = Easm.Lexer.analyze(inhalt)
-    :ok
+    _new_aout =
+      lines
+      |> Enum.reduce(%ADotOut{}, fn line, a_out ->
+        Easm.Parser.build_symbol_table(line, a_out)
+      end)
   end
 end

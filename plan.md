@@ -49,7 +49,8 @@ BNF Expressions
 <int> ::= <digit> <int> | <digit>
 <digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 ```
-These were copied from https://athena.ecs.csus.edu/~gordonvs/135/resources/04bnfParseTrees.pdf
+
+These were copied from <https://athena.ecs.csus.edu/~gordonvs/135/resources/04bnfParseTrees.pdf>
 
 These were copied from <https://athena.ecs.csus.edu/~gordonvs/135/resources/04bnfParseTrees.pdf>
 
@@ -76,3 +77,8 @@ The 940 software uses a character set where the code for the space is 0. All inp
 On the other hand, The assemly source is in normal ASCII, and so the assembler will use ascii.
 
 Additionally, the ```ASC``` directive will translate the characters as for input/output, as above. The same is true for ```='abcd'```, excep that must use ```ETR =77B```
+
+## Code translation
+
+There should be an ```IDENT```; make it a must to simplify for now.
+The IDENT label is used as the relocation reference in the a.out.
