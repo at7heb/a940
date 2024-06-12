@@ -69,7 +69,7 @@ defmodule Easm.Lexer do
 
   def match_white_space(line) when is_binary(line) do
     case Regex.run(~r{^( +)(.*)$}, line, capture: :all_but_first) do
-      [token, rest] -> {true, {:white_space, token}, rest}
+      [_token, rest] -> {true, {:white_space, " "}, rest}
       _ -> false
     end
   end

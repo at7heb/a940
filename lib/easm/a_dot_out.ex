@@ -1,13 +1,18 @@
 defmodule Easm.ADotOut do
   defstruct memory: [],
             symbols: %{},
+            lines: %{},
+            line_count: 0,
             if_status: [true],
-            relocation_reference: :absolute,
+            relocation_reference: :relocatable,
             absolute_location: 0,
             relocatable_location: 0,
             needs: [:ident, :end],
             state: :beginning_of_line,
             label: "THELABEL",
+            # line_ok: true,
+            file_ok: true,
+            listing: [],
             flags: []
 
   # each memory has {:relocatable, address, content} or {:absolute, address, content}
