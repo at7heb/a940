@@ -3,6 +3,15 @@ defmodule Easm.Ops do
     %{indirect: 0o40000, index: 0o20000000}
   end
 
+  def pseudo_op_lookup(op) when is_binary(op) do
+    op_type = Map.get(pseudo_op_map(), op)
+
+    cond do
+      op_type == nil -> :not_pseudo
+      true -> {:ok, op_type}
+    end
+  end
+
   def pseudo_op_map() do
     %{
       "IDENT" => :ident,
@@ -19,6 +28,19 @@ defmodule Easm.Ops do
       "LIST" => :list,
       "NOLIST" => :nolist
     }
+  end
+
+  def op_lookup(op) when is_binary(op) do
+    op_info = Map.get(opcode_map(), op)
+
+    cond do
+      op_info == nil ->
+        :not_operatioin
+
+      true ->
+        {op_value, address_type} = op_info
+        {:ok, op_value, address_type}
+    end
   end
 
   def opcode_map() do

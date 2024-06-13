@@ -44,7 +44,7 @@ defmodule Easm.ProcessAssemblerFile do
 
   def assemble_line(%ADotOut{} = aout, line_number) when is_integer(line_number) do
     Assembly.initialize_for_a_line_assembly(aout, line_number)
-    Assembly.assemble_lexons()
+    |> Assembly.assemble_lexons(line_number)
   end
 
   def resolve_symbols(%ADotOut{} = aout) do

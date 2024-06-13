@@ -1,41 +1,49 @@
 defmodule Easm.Assembly do
   alias Easm.LexicalLine
   alias Easm.ADotOut
+  alias Easm.Symbol
+  alias Easm.Ops
 
   def assemble_lexons(%ADotOut{} = aout, line_number) when is_integer(line_number) do
     lexon_cursor = get_cursor(aout)
+    IO.puts("assemble_lexons line #{line_number} lexon #{lexon_cursor}")
+    Map.get(aout.lines, line_number, nil)
+    Map.get(aout.lines, :line_ok)
 
     cond do
-      Enum.at(aout.lines, lexon_cursor, nil) == nil or Map.get(aout.lines, :line_ok) == false ->
+      Map.get(aout.lines, line_number, nil) == nil or
+          Map.get(aout.lines, :line_ok) ==
+            false ->
+        IO.inspect("at end, or error in line")
         aout
 
       true ->
         recognize_comment(aout)
         |> recognize_export_indicator()
-        |> recognize_symbol()
+        |> recognize_symbol_definition()
+        |> recognize_white_space()
+        |> recognize_operator()
         |> update_listing_if_error()
         |> increment_cursor()
+        |> remove_flag(:recognized_one)
         |> assemble_lexons(line_number)
     end
   end
 
   def recognize_comment(%ADotOut{} = aout) do
-    {%LexicalLine{} = line_lex, line_position} = get_token_info(aout)
+    {%LexicalLine{} = line_lex, line_position, token} = get_token_info(aout)
 
     aout.file_ok |> dbg
 
     cond do
-      (line_position == 0 and Enum.at(line_lex.tokens, line_position) == {:asterisk, "*"}) or
-          (line_position == 0 and {:white_space, " "} == Enum.at(line_lex.tokens, line_position) and
-             (line_position == 1 and Enum.at(line_lex.tokens, line_position) == {:asterisk, "*"})) ->
+      token == {:asterisk, "*"} ->
         new_line_listing = listing(line_lex)
-
-        update_aout(aout, new_line_listing, true)
+        update_aout(aout, new_line_listing, true) |> add_flag(:recognized_one)
 
       true ->
-        aout.file_ok |> dbg
         aout
     end
+    |> remove_flag(:symbol_definition_ok)
   end
 
   def recognize_export_indicator(%ADotOut{} = aout) do
@@ -46,14 +54,14 @@ defmodule Easm.Assembly do
     lines = aout.lines
     cursor = Map.get(lines, :line_cursor)
     current_line = Map.get(lines, :current_line)
-    lexons = Map.get(lines, current_line)
+    lexons = Map.get(lines, current_line) |> Map.get(:tokens)
 
     cond do
       cursor > 0 ->
         aout
 
       Enum.at(lexons, 0) == {:operator, "$"} and elem(Enum.at(lexons, 1), 0) == :symbol ->
-        add_flag(aout, :export_the_symbol)
+        add_flag(aout, :export_the_symbol) |> add_flag(:recognized_one)
 
       Enum.at(lexons, 0) == {:operator, "$"} ->
         line_is_not_okay(aout, "e:#{0}")
@@ -63,18 +71,57 @@ defmodule Easm.Assembly do
     end
   end
 
-  def recognize_symbol(%ADotOut{lines: lines} = aout) do
-    {%LexicalLine{} = line_lex, line_position} = get_token_info(aout)
-    lexons = line_lex.tokens
-    {type, val} = Enum.at(lexons, line_position)
+  def recognize_symbol_definition(%ADotOut{} = aout) do
+    {%LexicalLine{} = line_lex, line_position, lexon} = get_token_info(aout)
+    # lexons = line_lex.tokens
+    {type, val} = lexon
 
     cond do
-      type == :symbol and line_position == 0 ->
+      type == :symbol and has_flag?(aout, :symbol_definition_ok) ->
         symbol_value = Symbol.symbol(aout)
-        update_symbol_table(aout, symbol, symbol_value)
-        type == :symbol and line_position == 1 and has_flag?(aout, :export_the_symbolo)
+
+        update_symbol_table(aout, val, symbol_value)
+        |> remove_flag(:symbol_definition_ok)
+        |> add_flag(:recognized_one)
+        |> dbg
+
+      type == :symbol and line_position == 1 and has_flag?(aout, :export_the_symbol) ->
+        symbol_value = %{Symbol.symbol(aout) | type: :exported}
+
+        update_symbol_table(aout, val, symbol_value)
+        |> remove_flag(:export_the_symbol)
+        |> remove_flag(:symbol_definition_ok)
+        |> add_flag(:recognized_one)
+        |> dbg
 
       true ->
+        aout
+    end
+  end
+
+  def recognize_white_space(%ADotOut{} = aout) do
+    {%LexicalLine{} = line_lex, line_position, lexon} = get_token_info(aout)
+    # lexons = line_lex.tokens
+    {type, val} = lexon
+
+    cond do
+      type == :white_space and has_flag?(:need_first_white_space) ->
+        remove_flag(aout, :need_first_white_space)
+        |> add_flag(:need_operator)
+        |> add_flag(:recognized_one)
+
+      true ->
+        aout
+    end
+  end
+
+  def recognize_operator(%ADotOut{} = aout) do
+    {%LexicalLine{} = line_lex, line_position, lexon} = get_token_info(aout)
+    # lexons = line_lex.tokens
+    {type, val} = lexon
+
+    cond do
+      type == :operator and has_flag?(:need_operator) ->
         nil
     end
   end
@@ -99,10 +146,11 @@ defmodule Easm.Assembly do
   end
 
   def get_token_info(%ADotOut{lines: lines} = _aout) do
-    {Map.get(lines, lines.current_line), lines.line_cursor}
+    lex_line = Map.get(lines, lines.current_line)
+    {lex_line, lines.line_cursor, Map.get(lex_line.tokens, lines.line_cursor)} |> dbg
   end
 
-  def has_flag?(%ADotOut{flags: flags} = aout, flag) do
+  def has_flag?(%ADotOut{flags: flags} = _aout, flag) do
     flag in flags
   end
 
@@ -116,13 +164,15 @@ defmodule Easm.Assembly do
       when is_integer(current_line) do
     new_lines =
       Map.put(aout.lines, :current_line, current_line)
-      |> Map.put(:line_ok, false)
+      |> Map.put(:line_ok, true)
       |> Map.put(:finished_with_line, false)
       |> Map.put(:line_cursor, 0)
 
     # |> dbg
 
     %{aout | lines: new_lines}
+    |> add_flag(:symbol_definition_ok)
+    |> add_flag(:need_first_white_space)
   end
 
   def line_is_not_okay(aout, message) do
@@ -151,7 +201,7 @@ defmodule Easm.Assembly do
 
   def update_listing_if_error(%ADotOut{} = aout, message \\ "unk") do
     cond do
-      aout.lines.line_ok == false ->
+      aout.lines.line_ok == false or has_flag(aout, :recognized_one) ->
         text = Map.get(aout.lines, aout.lines.current_line) |> Map.get(:original)
         listing_line = " ERROR #{String.pad_trailing(message, @content_width)}  #{text}"
         update_aout(aout, listing_line, false)
@@ -159,5 +209,22 @@ defmodule Easm.Assembly do
       true ->
         aout
     end
+  end
+
+  def update_symbol_table(%ADotOut{symbols: symbols} = aout, symbol, %Symbol{} = symbol_value)
+      when is_binary(symbol) do
+    existing_symbol = Map.get(symbols, symbol, nil)
+
+    new_symbol_value =
+      cond do
+        existing_symbol == nil ->
+          symbol_value
+
+        existing_symbol.known == false ->
+          %{Symbol.symbol() | known: {:error, :multiply_defined}}
+      end
+
+    new_symbols = Map.put(symbols, symbol, new_symbol_value)
+    %{aout | symbols: new_symbols}
   end
 end
