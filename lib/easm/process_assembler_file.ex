@@ -5,19 +5,24 @@ defmodule Easm.ProcessAssemblerFile do
 
   def do_one_file(file_path)
       when is_binary(file_path) do
-    run_lexer(file_path)
-    |> assemble()
+    read_and_condition_source(file_path)
+    |> run_lexer()
+    |> assemble_file()
     |> resolve_symbols()
     |> output(file_path)
   end
 
-  def run_lexer(filepath) do
+  def read_and_condition_source(filepath) do
     File.read!(filepath)
     |> String.upcase()
     |> String.replace("\t", " ")
     |> String.replace("\r", "")
     |> String.split("\n")
     |> Enum.map(&String.trim_trailing(&1, "\n"))
+  end
+
+  def run_lexer(source_lines) when is_list(source_lines) do
+    source_lines
     |> Easm.Lexer.analyze()
     |> Enum.map(fn line_map -> {line_map.linenumber, LexicalLine.new(line_map)} end)
     |> Enum.reduce(%{}, fn {line_number, lexical_line}, lexical_line_map ->
@@ -28,13 +33,18 @@ defmodule Easm.ProcessAssemblerFile do
     # |> dbg
   end
 
-  def assemble(%ADotOut{} = aout) do
+  def assemble_file(%ADotOut{} = aout) do
     current_line = Map.get(aout.lines, :current_line) + 1
 
     cond do
       current_line > aout.line_count -> aout
-      true -> Assembly.assemble_line(aout, current_line) |> assemble()
+      true -> assemble_line(aout, current_line) |> assemble_file()
     end
+  end
+
+  def assemble_line(%ADotOut{} = aout, line_number) when is_integer(line_number) do
+    Assembly.initialize_for_a_line_assembly(aout, line_number)
+    Assembly.assemble_lexons()
   end
 
   def resolve_symbols(%ADotOut{} = aout) do
