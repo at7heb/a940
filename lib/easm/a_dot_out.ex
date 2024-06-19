@@ -8,7 +8,7 @@ defmodule Easm.ADotOut do
             absolute_location: 0,
             relocatable_location: 0,
             needs: [:ident, :end],
-            state: :beginning_of_line,
+            # the label defined in current statement;
             label: "THELABEL",
             # line_ok: true,
             file_ok: true,

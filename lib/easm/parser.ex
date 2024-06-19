@@ -25,7 +25,7 @@ defmodule Easm.Parser do
 
   def build_symbol_table(
         tokens,
-        %ADotOut{state: :beginning_of_line} = aout
+        %ADotOut{} = aout
       )
       when is_list(tokens) do
     [h | t] = tokens

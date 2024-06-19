@@ -1,33 +1,8 @@
 defmodule Easm.Ops do
+  alias Easm.ADotOut
+
   def misc_ops() do
     %{indirect: 0o40000, index: 0o20000000}
-  end
-
-  def pseudo_op_lookup(op) when is_binary(op) do
-    op_type = Map.get(pseudo_op_map(), op)
-
-    cond do
-      op_type == nil -> :not_pseudo
-      true -> {:ok, op_type}
-    end
-  end
-
-  def pseudo_op_map() do
-    %{
-      "IDENT" => :ident,
-      "END" => :end,
-      "EQU" => :equ,
-      "DATA" => :data,
-      "BSS" => :bss,
-      "ASC" => :asc,
-      "OPD" => :opd,
-      "BES" => :bes,
-      "IF" => :if,
-      "ELSE" => :else,
-      "ENDIF" => :endif,
-      "LIST" => :list,
-      "NOLIST" => :nolist
-    }
   end
 
   def op_lookup(op) when is_binary(op) do
@@ -35,13 +10,23 @@ defmodule Easm.Ops do
 
     cond do
       op_info == nil ->
-        :not_operatioin
+        :not_op
 
       true ->
         {op_value, address_type} = op_info
         {:ok, op_value, address_type}
     end
   end
+
+  def handle_op(%ADotOut{} = aout, {:ok, op_value, address_type}) do
+    aout
+  end
+
+  def op_indirect(nil), do: {false, 0}
+
+  def op_indirect({:asterisk, _}), do: {true, 1}
+
+  def op_indirect({_, _}), do: {false, 0}
 
   def opcode_map() do
     %{

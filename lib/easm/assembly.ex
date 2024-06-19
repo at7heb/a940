@@ -3,127 +3,170 @@ defmodule Easm.Assembly do
   alias Easm.ADotOut
   alias Easm.Symbol
   alias Easm.Ops
+  alias Easm.Pseudos
 
   def assemble_lexons(%ADotOut{} = aout, line_number) when is_integer(line_number) do
     lexon_cursor = get_cursor(aout)
     IO.puts("assemble_lexons line #{line_number} lexon #{lexon_cursor}")
-    Map.get(aout.lines, line_number, nil)
-    Map.get(aout.lines, :line_ok)
 
     cond do
-      Map.get(aout.lines, line_number, nil) == nil or
-          Map.get(aout.lines, :line_ok) ==
-            false ->
+      Map.get(aout.lines, line_number, nil) == nil ->
         IO.inspect("at end, or error in line")
-        aout
+        add_flag(aout, :done)
 
       true ->
         recognize_comment(aout)
-        |> recognize_export_indicator()
-        |> recognize_symbol_definition()
-        |> recognize_white_space()
-        |> recognize_operator()
-        |> update_listing_if_error()
-        |> increment_cursor()
-        |> remove_flag(:recognized_one)
-        |> assemble_lexons(line_number)
+        |> handle_label_part()
+        |> handle_operator_part()
+
+        # |> update_listing_if_error()
+        # |> increment_cursor()
+        # |> remove_flag(:recognized_one)
+        # |> assemble_lexons(line_number)
     end
   end
 
   def recognize_comment(%ADotOut{} = aout) do
-    {%LexicalLine{} = line_lex, line_position, token} = get_token_info(aout)
-
-    aout.file_ok |> dbg
+    {%LexicalLine{} = line_lex, _line_position, token} = get_token_info(aout)
 
     cond do
       token == {:asterisk, "*"} ->
         new_line_listing = listing(line_lex)
-        update_aout(aout, new_line_listing, true) |> add_flag(:recognized_one)
-
-      true ->
-        aout
-    end
-    |> remove_flag(:symbol_definition_ok)
-  end
-
-  def recognize_export_indicator(%ADotOut{} = aout) do
-    # E.G. $NUM2STR ZRO N2SRET
-    # the dollar sign is the first element
-    # it must be followed by a symbol
-    # in this case, set the flag so the symbol will be exported
-    lines = aout.lines
-    cursor = Map.get(lines, :line_cursor)
-    current_line = Map.get(lines, :current_line)
-    lexons = Map.get(lines, current_line) |> Map.get(:tokens)
-
-    cond do
-      cursor > 0 ->
-        aout
-
-      Enum.at(lexons, 0) == {:operator, "$"} and elem(Enum.at(lexons, 1), 0) == :symbol ->
-        add_flag(aout, :export_the_symbol) |> add_flag(:recognized_one)
-
-      Enum.at(lexons, 0) == {:operator, "$"} ->
-        line_is_not_okay(aout, "e:#{0}")
+        update_aout(aout, new_line_listing, true) |> add_flag(:done)
 
       true ->
         aout
     end
   end
 
-  def recognize_symbol_definition(%ADotOut{} = aout) do
-    {%LexicalLine{} = line_lex, line_position, lexon} = get_token_info(aout)
-    # lexons = line_lex.tokens
-    {type, val} = lexon
-
+  def handle_label_part(%ADotOut{} = aout) do
+    # handle 3 cases:
+    # whitespace
+    # label whitespace
+    # $label whitespace
+    # after the whitespace, there will be a pseudo or real operator.
+    # So thee may be only 2 tokens in a line: whitespace and op
+    # a solo whitespace token should already have been eliminated by the string trimming.
     cond do
-      type == :symbol and has_flag?(aout, :symbol_definition_ok) ->
-        symbol_value = Symbol.symbol(aout)
-
-        update_symbol_table(aout, val, symbol_value)
-        |> remove_flag(:symbol_definition_ok)
-        |> add_flag(:recognized_one)
-        |> dbg
-
-      type == :symbol and line_position == 1 and has_flag?(aout, :export_the_symbol) ->
-        symbol_value = %{Symbol.symbol(aout) | type: :exported}
-
-        update_symbol_table(aout, val, symbol_value)
-        |> remove_flag(:export_the_symbol)
-        |> remove_flag(:symbol_definition_ok)
-        |> add_flag(:recognized_one)
-        |> dbg
+      has_flag?(aout, :done) ->
+        aout
 
       true ->
-        aout
+        lines = aout.lines
+        current_line = Map.get(lines, :current_line)
+
+        handle_label_part(
+          aout,
+          Map.get(lines, current_line)
+          |> Map.get(:tokens)
+          |> Enum.take(3)
+        )
     end
   end
 
-  def recognize_white_space(%ADotOut{} = aout) do
-    {%LexicalLine{} = line_lex, line_position, lexon} = get_token_info(aout)
-    # lexons = line_lex.tokens
-    {type, val} = lexon
+  def handle_label_part(%ADotOut{} = aout, [white_space: _space, symbol: _] = _lexons) do
+    aout |> increment_cursor_by(1) |> finish_part()
+  end
 
+  def handle_label_part(%ADotOut{} = aout, [white_space: _space, asterisk: _] = _lexons) do
+    aout |> increment_cursor_by(1) |> finish_part()
+  end
+
+  # whitespace op
+  # def handle_label_part(
+  #       %ADotOut{} = aout,
+  #       [{:whitespace, _}, {:operator, _}] = _lexons
+  #     ) do
+  #   aout |> increment_cursor_by(1) |> finish_part()
+  # end
+
+  def handle_label_part(
+        %ADotOut{} = aout,
+        [_, _] = _lexons
+      ) do
+    IO.inspect("error case to handle lable part with 2 tokens")
+    aout |> increment_cursor_by(1) |> finish_part(false)
+  end
+
+  def handle_label_part(
+        %ADotOut{} = aout,
+        [symbol: sym, white_space: _, symbol: _] = _lexons
+      ) do
+    # put symbol in symbol table
+    symbol_value = Symbol.symbol(aout) |> dbg
+
+    update_symbol_table(aout, sym, symbol_value) |> increment_cursor_by(2) |> finish_part()
+  end
+
+  def handle_label_part(
+        %ADotOut{} = aout,
+        [operator: "$", symbol: sym, white_space: _] = _lexons
+      ) do
+    # put symbol as exported into the symbol table
+    symbol_value = %{Symbol.symbol(aout) | type: :exported}
+
+    update_symbol_table(aout, sym, symbol_value) |> increment_cursor_by(3) |> finish_part()
+  end
+
+  # error case
+  def handle_label_part(
+        %ADotOut{} = aout,
+        lexons
+      ) do
+    # put symbol as exported into the symbol table
+    IO.inspect(lexons, label: "error case final handle label")
+    aout |> increment_cursor_by(3) |> finish_part(false)
+  end
+
+  def handle_operator_part(%ADotOut{file_ok: false} = aout) do
+    aout
+  end
+
+  # cases
+  # operator
+  # operator whitespace
+  # operator whitespace comments
+  # operator whitespace expression
+  # operator asterisk whitespace expression
+  # leave cursor pointing to expression, comments, or end of line
+  def handle_operator_part(%ADotOut{lines: lines} = aout) do
     cond do
-      type == :white_space and has_flag?(:need_first_white_space) ->
-        remove_flag(aout, :need_first_white_space)
-        |> add_flag(:need_operator)
-        |> add_flag(:recognized_one)
+      has_flag?(aout, :done) ->
+        aout
 
       true ->
-        aout
+        current_line = Map.get(lines, :current_line)
+        cursor = get_cursor(aout)
+
+        handle_operator_part(
+          aout,
+          Map.get(lines, current_line).tokens
+          |> Enum.slice(cursor..(cursor + 2))
+          |> dbg
+        )
     end
   end
 
-  def recognize_operator(%ADotOut{} = aout) do
-    {%LexicalLine{} = line_lex, line_position, lexon} = get_token_info(aout)
-    # lexons = line_lex.tokens
-    {type, val} = lexon
+  def handle_operator_part(%ADotOut{} = aout, tokens) when is_list(tokens) do
+    {:symbol, op} = hd(tokens)
+    is_pseudo = Pseudos.pseudo_op_lookup(op)
+    is_op = Ops.op_lookup(op)
+    {is_indirect, extra_increment} = Ops.op_indirect(Enum.at(tokens, 1))
 
-    cond do
-      type == :operator and has_flag?(:need_operator) ->
-        nil
-    end
+    {new_aout, okay} =
+      cond do
+        is_pseudo != :not_pseudo and is_indirect == false ->
+          {Pseudos.handle_pseudo(aout, is_pseudo), true}
+
+        is_op != :not_op ->
+          {Ops.handle_op(aout, is_op), true}
+
+        true ->
+          {aout, false}
+      end
+
+    {tokens, is_pseudo, is_op} |> dbg
+    new_aout |> increment_cursor_by(1 + extra_increment) |> finish_part(okay)
   end
 
   @address_width 5
@@ -140,6 +183,14 @@ defmodule Easm.Assembly do
     " #{String.duplicate(" ", @address_width)} #{String.duplicate(" ", @content_width)}  #{text}"
   end
 
+  def finish_part(%ADotOut{} = aout, okay \\ true) when is_boolean(okay) do
+    cond do
+      okay -> aout
+      true -> line_is_not_okay(aout, "LABEL")
+    end
+    |> dbg
+  end
+
   def get_cursor(%ADotOut{} = aout) do
     lines = aout.lines
     Map.get(lines, :line_cursor)
@@ -147,15 +198,20 @@ defmodule Easm.Assembly do
 
   def get_token_info(%ADotOut{lines: lines} = _aout) do
     lex_line = Map.get(lines, lines.current_line)
-    {lex_line, lines.line_cursor, Map.get(lex_line.tokens, lines.line_cursor)} |> dbg
+    {lex_line, lines.line_cursor, Enum.at(lex_line.tokens, lines.line_cursor)} |> dbg
   end
 
   def has_flag?(%ADotOut{flags: flags} = _aout, flag) do
     flag in flags
   end
 
+  # these two increment cursor functions are the equivalent of set/put cursor
   def increment_cursor(%ADotOut{} = aout) do
-    new_cursor = 1 + get_cursor(aout)
+    increment_cursor_by(aout, 1)
+  end
+
+  def increment_cursor_by(%ADotOut{} = aout, n) when is_integer(n) and n > 0 do
+    new_cursor = n + get_cursor(aout)
     new_lines = Map.put(aout.lines, :line_cursor, new_cursor)
     %{aout | lines: new_lines}
   end
@@ -168,11 +224,8 @@ defmodule Easm.Assembly do
       |> Map.put(:finished_with_line, false)
       |> Map.put(:line_cursor, 0)
 
-    # |> dbg
-
-    %{aout | lines: new_lines}
-    |> add_flag(:symbol_definition_ok)
-    |> add_flag(:need_first_white_space)
+    %{aout | lines: new_lines, label: nil}
+    |> remove_flag(:done)
   end
 
   def line_is_not_okay(aout, message) do
@@ -201,7 +254,7 @@ defmodule Easm.Assembly do
 
   def update_listing_if_error(%ADotOut{} = aout, message \\ "unk") do
     cond do
-      aout.lines.line_ok == false or has_flag(aout, :recognized_one) ->
+      aout.lines.line_ok == false or has_flag?(aout, :recognized_one) ->
         text = Map.get(aout.lines, aout.lines.current_line) |> Map.get(:original)
         listing_line = " ERROR #{String.pad_trailing(message, @content_width)}  #{text}"
         update_aout(aout, listing_line, false)
@@ -225,6 +278,6 @@ defmodule Easm.Assembly do
       end
 
     new_symbols = Map.put(symbols, symbol, new_symbol_value)
-    %{aout | symbols: new_symbols}
+    %{aout | symbols: new_symbols, label: symbol}
   end
 end
