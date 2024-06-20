@@ -13,6 +13,7 @@ defmodule Easm.ADotOut do
             # line_ok: true,
             file_ok: true,
             listing: [],
+            # add {:psuedo, <the pseudo atom>}
             flags: []
 
   # each memory has {:relocatable, address, content} or {:absolute, address, content}

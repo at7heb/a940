@@ -10,9 +10,8 @@ defmodule Easm.Pseudos do
     end
   end
 
-  def handle_pseudo(%ADotOut{} = aout, {:ok, op_type}) do
-    aout
-  end
+  def handle_pseudo(%ADotOut{} = aout, {:ok, pseudo_type}),
+    do: %{aout | flags: [{:pseudo, pseudo_type} | aout.flags]}
 
   def pseudo_op_map() do
     %{

@@ -19,7 +19,8 @@ defmodule Easm.Ops do
   end
 
   def handle_op(%ADotOut{} = aout, {:ok, op_value, address_type}) do
-    aout
+    # handle the op_value; put it in the memory.
+    %{aout | flags: [{:address_type, address_type} | aout.flags]}
   end
 
   def op_indirect(nil), do: {false, 0}

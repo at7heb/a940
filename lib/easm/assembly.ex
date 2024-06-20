@@ -31,7 +31,7 @@ defmodule Easm.Assembly do
 
     cond do
       token == {:asterisk, "*"} ->
-        new_line_listing = listing(line_lex)
+        new_line_listing = listing(line_lex.original)
         update_aout(aout, new_line_listing, true) |> add_flag(:done)
 
       true ->
