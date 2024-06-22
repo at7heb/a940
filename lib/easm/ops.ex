@@ -1,5 +1,7 @@
 defmodule Easm.Ops do
   alias Easm.ADotOut
+  alias Easm.Symbol
+  alias Easm.Memory
 
   def misc_ops() do
     %{indirect: 0o40000, index: 0o20000000}
@@ -20,7 +22,13 @@ defmodule Easm.Ops do
 
   def handle_op(%ADotOut{} = aout, {:ok, op_value, address_type}) do
     # handle the op_value; put it in the memory.
-    %{aout | flags: [{:address_type, address_type} | aout.flags]}
+    {current_location, relocatable?} = Memory.get_location(aout)
+
+    memory_entry =
+      Memory.memory(relocatable?, current_location, op_value, %Symbol{}, address_type)
+
+    %{aout | memory: [memory_entry | aout.memory]} |> ADotOut.increment_current_location()
+    # can add symbol, indirect, or indexed to hd(aout.memory).
   end
 
   def op_indirect(nil), do: {false, 0}
