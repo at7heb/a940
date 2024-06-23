@@ -4,6 +4,7 @@ defmodule Easm.Assembly do
   alias Easm.Symbol
   alias Easm.Ops
   alias Easm.Pseudos
+  alias Easm.Address
   # alias Easm.Memory
 
   def assemble_lexons(%ADotOut{} = aout, line_number) when is_integer(line_number) do
@@ -19,6 +20,7 @@ defmodule Easm.Assembly do
         recognize_comment(aout)
         |> handle_label_part()
         |> handle_operator_part()
+        |> Address.handle_address_part()
         |> update_aout()
     end
   end
@@ -152,7 +154,7 @@ defmodule Easm.Assembly do
     {:symbol, op} = hd(tokens)
     is_pseudo = Pseudos.pseudo_op_lookup(op)
     is_op = Ops.op_lookup(op)
-    {is_indirect, extra_increment} = Ops.op_indirect(Enum.at(tokens, 1)) |> dbg
+    {is_indirect, extra_increment} = Ops.op_indirect(Enum.at(tokens, 1))
 
     {new_aout, okay} =
       cond do

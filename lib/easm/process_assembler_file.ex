@@ -29,8 +29,6 @@ defmodule Easm.ProcessAssemblerFile do
       Map.put_new(lexical_line_map, line_number, lexical_line)
     end)
     |> make_aout()
-
-    # |> dbg
   end
 
   def assemble_file(%ADotOut{} = aout) do
