@@ -3,6 +3,11 @@ defmodule Easm.Ops do
   alias Easm.Symbol
   alias Easm.Memory
 
+  import Bitwise
+
+  @indirect 0o40000
+  # @index 0o20000000
+
   def misc_ops() do
     %{indirect: 0o40000, index: 0o20000000}
   end
@@ -20,22 +25,35 @@ defmodule Easm.Ops do
     end
   end
 
-  def handle_op(%ADotOut{} = aout, {:ok, op_value, address_type}) do
+  def handle_op(%ADotOut{} = aout, {:ok, op_value, address_type}, indirect?) do
     # handle the op_value; put it in the memory.
     {current_location, relocatable?} = Memory.get_location(aout)
 
     memory_entry =
-      Memory.memory(relocatable?, current_location, op_value, %Symbol{}, address_type)
+      Memory.memory(
+        relocatable?,
+        current_location,
+        op_value ||| indirect_value(indirect?),
+        %Symbol{},
+        address_type
+      )
 
     %{aout | memory: [memory_entry | aout.memory]} |> ADotOut.increment_current_location()
     # can add symbol, indirect, or indexed to hd(aout.memory).
   end
 
-  def op_indirect(nil), do: {false, 0}
+  def op_indirect(nil), do: {false, 0} |> dbg
 
-  def op_indirect({:asterisk, _}), do: {true, 1}
+  def op_indirect({:asterisk, _asterisk}), do: {true, 1} |> dbg
 
-  def op_indirect({_, _}), do: {false, 0}
+  def op_indirect({_, _}), do: {false, 0} |> dbg
+
+  def indirect_value(indirect?) when is_boolean(indirect?) do
+    cond do
+      indirect? -> @indirect
+      true -> 0
+    end
+  end
 
   def opcode_map() do
     %{

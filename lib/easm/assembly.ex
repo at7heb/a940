@@ -7,26 +7,20 @@ defmodule Easm.Assembly do
   # alias Easm.Memory
 
   def assemble_lexons(%ADotOut{} = aout, line_number) when is_integer(line_number) do
-    aout |> dbg
     lexon_cursor = get_cursor(aout)
     IO.puts("assemble_lexons line #{line_number} lexon #{lexon_cursor}")
 
-    new_aout =
-      cond do
-        Map.get(aout.lines, line_number, nil) == nil ->
-          IO.inspect("at end, or error in line")
-          add_flag(aout, :done)
+    cond do
+      Map.get(aout.lines, line_number, nil) == nil ->
+        IO.inspect("at end, or error in line")
+        add_flag(aout, :done)
 
-        true ->
-          new_aout =
-            recognize_comment(aout)
-            |> handle_label_part()
-            |> handle_operator_part()
-
-          update_aout(new_aout, listing(new_aout), new_aout.file_ok)
-      end
-
-    new_aout |> dbg
+      true ->
+        recognize_comment(aout)
+        |> handle_label_part()
+        |> handle_operator_part()
+        |> update_aout()
+    end
   end
 
   def recognize_comment(%ADotOut{} = aout) do
@@ -86,6 +80,13 @@ defmodule Easm.Assembly do
   def handle_label_part(
         %ADotOut{} = aout,
         [white_space: _space, symbol: _, white_space: _space2] = _lexons
+      ) do
+    aout |> increment_cursor_by(1) |> finish_part()
+  end
+
+  def handle_label_part(
+        %ADotOut{} = aout,
+        [white_space: _space, symbol: _, asterisk: _asterisk] = _lexons
       ) do
     aout |> increment_cursor_by(1) |> finish_part()
   end
@@ -159,7 +160,7 @@ defmodule Easm.Assembly do
           {Pseudos.handle_pseudo(aout, is_pseudo), true}
 
         is_op != :not_op ->
-          {Ops.handle_op(aout, is_op), true}
+          {Ops.handle_op(aout, is_op, is_indirect), true}
 
         true ->
           {aout, false}
@@ -266,6 +267,8 @@ defmodule Easm.Assembly do
     new_flags = Enum.filter(flags, &(flag != &1))
     %{aout | flags: new_flags}
   end
+
+  def update_aout(%ADotOut{} = aout), do: update_aout(aout, listing(aout), aout.file_ok)
 
   def update_aout(%ADotOut{} = aout, new_line_listing, ok?) when is_boolean(ok?) do
     new_lines =
