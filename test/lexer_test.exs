@@ -5,7 +5,7 @@ defmodule LexerTest do
 
   test "recognize white space" do
     rv = Lexer.match_white_space("   CAX")
-    assert {true, {:white_space, "   "}, "CAX"} = rv
+    assert {true, {:white_space, " "}, "CAX"} = rv
     assert false == Lexer.match_white_space("* A COMMENT")
   end
 
@@ -45,7 +45,7 @@ defmodule LexerTest do
   end
 
   test "quoted string" do
-    assert {true, {:quoted, "'ABCD'"}, ",2"} = Lexer.match_quoted("'ABCD',2")
+    assert {true, {:quoted, "ABCD"}, ",2"} = Lexer.match_quoted("'ABCD',2")
     assert false == Lexer.match_quoted("NEW LDA =55")
   end
 end

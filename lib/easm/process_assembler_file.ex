@@ -2,11 +2,13 @@ defmodule Easm.ProcessAssemblerFile do
   alias Easm.ADotOut
   alias Easm.LexicalLine
   alias Easm.Assembly
+  alias Easm.Lexer
 
   def do_one_file(file_path)
       when is_binary(file_path) do
     read_and_condition_source(file_path)
     |> run_lexer()
+    |> find_parts()
     |> assemble_file()
     |> resolve_symbols()
     |> output(file_path)
@@ -23,12 +25,17 @@ defmodule Easm.ProcessAssemblerFile do
 
   def run_lexer(source_lines) when is_list(source_lines) do
     source_lines
-    |> Easm.Lexer.analyze()
+    |> Lexer.analyze()
     |> Enum.map(fn line_map -> {line_map.linenumber, LexicalLine.new(line_map)} end)
     |> Enum.reduce(%{}, fn {line_number, lexical_line}, lexical_line_map ->
       Map.put_new(lexical_line_map, line_number, lexical_line)
     end)
     |> make_aout()
+  end
+
+  def find_parts(%ADotOut{lines: lines} = aout) do
+    new_lines = Enum.map(lines, fn lex_line -> Lexer.find_parts(lex_line) end)
+    %{aout | lines: new_lines}
   end
 
   def assemble_file(%ADotOut{} = aout) do

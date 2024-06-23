@@ -118,7 +118,7 @@ defmodule Easm.Ops do
       "NOD" => {0o67_10000, :shift_op},
       "NODCY" => {0o67_30000, :shift_op},
       "HLT" => {0o00_00000, :no_addr},
-      "NOP" => {0o20_00000, :no_addr},
+      "NOP" => {0o20_00000, :mem_addr},
       "EXU" => {0o23_00000, :mem_addr},
       "ROV" => {0o02_20001, :no_addr},
       "REO" => {0o02_20010, :no_addr},

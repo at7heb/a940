@@ -1,4 +1,6 @@
 defmodule Easm.Lexer do
+  alias Easm.LexicalLine
+
   def analyze(lines) when is_list(lines) do
     Enum.map(lines, &analyze(&1))
     |> Enum.reduce({[], 1}, fn linemap, {lines, linecount} ->
@@ -153,5 +155,49 @@ defmodule Easm.Lexer do
       [token, rest] -> {true, {:symbol, token}, rest}
       _ -> false
     end
+  end
+
+  def find_parts(%LexicalLine{tokens: tokens} = lexical_line) do
+    cond do
+      is_comment?(tokens) ->
+        no_tokens(lexical_line)
+
+        identify_part_tokens(
+          lexical_line,
+          Enum.find_index(tokens, fn token -> elem(token, 0) == :white_space end)
+        )
+    end
+  end
+
+  def identify_part_tokens(%LexicalLine{} = lexical_line, []) do
+    no_tokens(lexical_line)
+  end
+
+  def identify_part_tokens(%LexicalLine{tokens: tokens} = lexical_line, []) do
+  end
+
+  def token_type({type, _}), do: type
+
+  def is_comment?(%LexicalLine{tokens: tokens} = lexical_line) do
+    number_of_tokens = length(tokens)
+
+    cond do
+      0 == number_of_tokens ->
+        true
+
+      1 <= number_of_tokens and token_type(hd(tokens)) == :asterisk ->
+        true
+
+      2 <= number_of_tokens and token_type(hd(tokens)) == :white_space and
+          token_type(hd(tl(tokens))) == :asterisk ->
+        true
+
+      true ->
+        false
+    end
+  end
+
+  def no_tokens(%LexicalLine{} = lexical_line) do
+    %{lexical_line | label_tokens: [], operation_tokens: [], address_tokens: []}
   end
 end
