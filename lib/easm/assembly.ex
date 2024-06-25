@@ -153,6 +153,10 @@ defmodule Easm.Assembly do
     finish_part(new_aout, okay?)
   end
 
+  def handle_address_part(%ADotOut{file_ok: false} = aout) do
+    aout
+  end
+
   @address_width 5
   @content_width 8
 
