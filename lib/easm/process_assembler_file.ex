@@ -8,7 +8,7 @@ defmodule Easm.ProcessAssemblerFile do
       when is_binary(file_path) do
     read_and_condition_source(file_path)
     |> run_lexer()
-    |> find_parts()
+    # |> find_parts()
     |> assemble_file()
     |> resolve_symbols()
     |> output(file_path)
@@ -28,7 +28,7 @@ defmodule Easm.ProcessAssemblerFile do
     |> Lexer.analyze()
     |> Enum.map(fn line_map -> {line_map.linenumber, LexicalLine.new(line_map)} end)
     |> Enum.reduce(%{}, fn {line_number, lexical_line}, lexical_line_map ->
-      Map.put_new(lexical_line_map, line_number, lexical_line)
+      Map.put_new(lexical_line_map, line_number, Lexer.find_parts(lexical_line))
     end)
     |> make_aout()
   end

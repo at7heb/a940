@@ -42,11 +42,11 @@ defmodule Easm.Ops do
     # can add symbol, indirect, or indexed to hd(aout.memory).
   end
 
-  def op_indirect(nil), do: {false, 0} |> dbg
+  def op_indirect(nil), do: false
 
-  def op_indirect({:asterisk, _asterisk}), do: {true, 1} |> dbg
+  def op_indirect({:asterisk, _asterisk}), do: true
 
-  def op_indirect({_, _}), do: {false, 0} |> dbg
+  def op_indirect({_, _}), do: false
 
   def indirect_value(indirect?) when is_boolean(indirect?) do
     cond do

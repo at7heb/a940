@@ -162,23 +162,39 @@ defmodule Easm.Lexer do
       is_comment?(tokens) ->
         no_tokens(lexical_line)
 
+      true ->
         identify_part_tokens(
           lexical_line,
-          Enum.find_index(tokens, fn token -> elem(token, 0) == :white_space end)
+          make_whitespace_token_list(tokens)
         )
     end
   end
 
-  def identify_part_tokens(%LexicalLine{} = lexical_line, []) do
-    no_tokens(lexical_line)
+  # add the label, operation, and address parts' tokens to the lexical line.
+  def identify_part_tokens(%LexicalLine{tokens: tokens} = lexical_line, ws_token_list)
+      when is_list(ws_token_list) do
+    [ws0 | [ws1 | [ws2 | _rest]]] = ws_token_list
+    label_tokens = Enum.slice(tokens, 0, ws0)
+    op_tokens = Enum.slice(tokens, ws0 + 1, ws1 - ws0 - 1)
+    address_tokens = Enum.slice(tokens, ws1 + 1, ws2 - ws1 - 1)
+
+    %{
+      lexical_line
+      | label_tokens: label_tokens,
+        operation_tokens: op_tokens,
+        address_tokens: address_tokens
+    }
   end
 
-  def identify_part_tokens(%LexicalLine{tokens: tokens} = lexical_line, []) do
-  end
+  # def identify_part_tokens(%LexicalLine{tokens: tokens} = lexical_line, [first | rest]) do
+  #   identify_part_tokens_rest(%{lexical_line | label_tokens: Enum.slice(tokens, 0,)})
+  # end
 
   def token_type({type, _}), do: type
 
-  def is_comment?(%LexicalLine{tokens: tokens} = lexical_line) do
+  def token_value({_, value}), do: value
+
+  def is_comment?(tokens) when is_list(tokens) do
     number_of_tokens = length(tokens)
 
     cond do
@@ -195,6 +211,18 @@ defmodule Easm.Lexer do
       true ->
         false
     end
+  end
+
+  def make_whitespace_token_list(tokens) when is_list(tokens) do
+    tokens = tokens ++ [{:white_space, " "}, {:white_space, " "}, {:white_space, " "}]
+    range = 0..(length(tokens) - 1)
+
+    Enum.zip(range, tokens)
+    |> Enum.reduce([], fn {index, {token_type, _}}, acc ->
+      if token_type == :white_space, do: [index | acc], else: acc
+    end)
+    |> Enum.reverse()
+    |> Enum.take(3)
   end
 
   def no_tokens(%LexicalLine{} = lexical_line) do
