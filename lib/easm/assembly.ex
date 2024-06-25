@@ -5,6 +5,7 @@ defmodule Easm.Assembly do
   alias Easm.Ops
   alias Easm.Pseudos
   alias Easm.Address
+  alias Easm.Lexer
   # alias Easm.Memory
 
   def assemble_lexons(%ADotOut{} = aout, line_number) when is_integer(line_number) do
@@ -18,6 +19,7 @@ defmodule Easm.Assembly do
 
       true ->
         recognize_comment(aout)
+        # |> parse_out_parts()
         |> handle_label_part()
         |> handle_operator_part()
         |> Address.handle_address_part()
@@ -36,6 +38,19 @@ defmodule Easm.Assembly do
         aout
     end
   end
+
+  # def parse_out_parts(%ADotOut{} = aout) do
+  #   cond do
+  #     has_flag?(aout, :done) ->
+  #       aout
+
+  #     true ->
+  #       line_number = Map.get(aout.lines, :current_line) |> dbg
+  #       new_line = Map.get(aout.lines, line_number) |> Lexer.find_parts() |> dbg
+  #       new_lines = Map.put(aout.lines, line_number, new_line) |> dbg
+  #       %{aout | lines: new_lines}
+  #   end
+  # end
 
   def handle_label_part(%ADotOut{} = aout) do
     # handle 3 cases:
@@ -56,71 +71,37 @@ defmodule Easm.Assembly do
         handle_label_part(
           aout,
           Map.get(lines, current_line)
-          |> Map.get(:tokens)
-          |> Enum.take(3)
         )
     end
   end
 
-  def handle_label_part(%ADotOut{} = aout, [white_space: _space, symbol: _] = _lexons) do
-    aout |> increment_cursor_by(1) |> finish_part()
-  end
+  def handle_label_part(%ADotOut{} = aout, %LexicalLine{label_tokens: label_tokens} = _lex_line) do
+    n_tokens = length(label_tokens)
 
-  def handle_label_part(%ADotOut{} = aout, [white_space: _space, asterisk: _] = _lexons) do
-    {%LexicalLine{} = line_lex, _line_position, _token} = get_token_info(aout)
-    finish_comment_line(aout, line_lex.original)
-  end
+    cond do
+      n_tokens == 0 ->
+        aout |> finish_part()
 
-  def handle_label_part(
-        %ADotOut{} = aout,
-        [_, _] = _lexons
-      ) do
-    IO.inspect("error case to handle lable part with 2 tokens")
-    aout |> increment_cursor_by(1) |> finish_part(false)
-  end
+      n_tokens == 1 and Lexer.token_type(hd(label_tokens)) == :symbol ->
+        symbol_name = Lexer.token_value(hd(label_tokens))
+        symbol_value = Symbol.symbol(aout)
 
-  def handle_label_part(
-        %ADotOut{} = aout,
-        [white_space: _space, symbol: _, white_space: _space2] = _lexons
-      ) do
-    aout |> increment_cursor_by(1) |> finish_part()
-  end
+        update_symbol_table(aout, symbol_name, symbol_value)
+        |> finish_part()
 
-  def handle_label_part(
-        %ADotOut{} = aout,
-        [white_space: _space, symbol: _, asterisk: _asterisk] = _lexons
-      ) do
-    aout |> increment_cursor_by(1) |> finish_part()
-  end
+      n_tokens == 2 and Lexer.token_type(hd(label_tokens)) == :operator and
+        Lexer.token_value(hd(label_tokens)) == "$" and
+          Lexer.token_type(Enum.at(label_tokens, 1)) == :symbol ->
+        symbol_name = Lexer.token_value(Enum.at(label_tokens, 1))
+        symbol_value = %{Symbol.symbol(aout) | type: :exported}
 
-  def handle_label_part(
-        %ADotOut{} = aout,
-        [symbol: sym, white_space: _, symbol: _] = _lexons
-      ) do
-    # put symbol in symbol table
-    symbol_value = Symbol.symbol(aout)
+        update_symbol_table(aout, symbol_name, symbol_value)
+        |> finish_part()
 
-    update_symbol_table(aout, sym, symbol_value) |> increment_cursor_by(2) |> finish_part()
-  end
-
-  def handle_label_part(
-        %ADotOut{} = aout,
-        [operator: "$", symbol: sym, white_space: _] = _lexons
-      ) do
-    # put symbol as exported into the symbol table
-    symbol_value = %{Symbol.symbol(aout) | type: :exported}
-
-    update_symbol_table(aout, sym, symbol_value) |> increment_cursor_by(3) |> finish_part()
-  end
-
-  # error case
-  def handle_label_part(
-        %ADotOut{} = aout,
-        lexons
-      ) do
-    # put symbol as exported into the symbol table
-    IO.inspect(lexons, label: "error case final handle label")
-    aout |> increment_cursor_by(3) |> finish_part(false)
+      true ->
+        IO.inspect("error case to handle lable part")
+        finish_part(aout, false)
+    end
   end
 
   def handle_operator_part(%ADotOut{file_ok: false} = aout) do
@@ -129,11 +110,7 @@ defmodule Easm.Assembly do
 
   # cases
   # operator
-  # operator whitespace
-  # operator whitespace comments
-  # operator whitespace expression
-  # operator asterisk whitespace expression
-  # leave cursor pointing to expression, comments, or end of line
+  # operator asterisk
   def handle_operator_part(%ADotOut{lines: lines} = aout) do
     cond do
       has_flag?(aout, :done) ->
@@ -141,22 +118,26 @@ defmodule Easm.Assembly do
 
       true ->
         current_line = Map.get(lines, :current_line)
-        cursor = get_cursor(aout)
 
         handle_operator_part(
           aout,
-          Map.get(lines, current_line).tokens |> Enum.slice(cursor..(cursor + 2))
+          Map.get(lines, current_line)
         )
     end
   end
 
-  def handle_operator_part(%ADotOut{} = aout, tokens) when is_list(tokens) do
-    {:symbol, op} = hd(tokens)
+  def handle_operator_part(
+        %ADotOut{} = aout,
+        %LexicalLine{operation_tokens: op_tokens} = _lex_line
+      ) do
+    {op0, op1} = {hd(op_tokens), Enum.at(op_tokens, 1)}
+
+    {:symbol, op} = op0
     is_pseudo = Pseudos.pseudo_op_lookup(op)
     is_op = Ops.op_lookup(op)
-    {is_indirect, extra_increment} = Ops.op_indirect(Enum.at(tokens, 1))
+    is_indirect = Ops.op_indirect(op1)
 
-    {new_aout, okay} =
+    {new_aout, okay?} =
       cond do
         is_pseudo != :not_pseudo and is_indirect == false ->
           {Pseudos.handle_pseudo(aout, is_pseudo), true}
@@ -169,7 +150,7 @@ defmodule Easm.Assembly do
       end
 
     # {tokens, is_pseudo, is_op}
-    new_aout |> increment_cursor_by(1 + extra_increment) |> finish_part(okay)
+    finish_part(new_aout, okay?)
   end
 
   @address_width 5
