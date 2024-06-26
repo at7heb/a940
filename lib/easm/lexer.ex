@@ -1,5 +1,6 @@
 defmodule Easm.Lexer do
   alias Easm.LexicalLine
+  import Bitwise
 
   def analyze(lines) when is_list(lines) do
     Enum.map(lines, &analyze(&1))
@@ -189,6 +190,26 @@ defmodule Easm.Lexer do
   # def identify_part_tokens(%LexicalLine{tokens: tokens} = lexical_line, [first | rest]) do
   #   identify_part_tokens_rest(%{lexical_line | label_tokens: Enum.slice(tokens, 0,)})
   # end
+
+  def number_value(text_value) when is_binary(text_value) do
+    # decimal value or octal:  123B or 4B7, for example
+    size = String.length(text_value)
+
+    value =
+      cond do
+        String.match?(text_value, ~r/B$/) ->
+          String.to_integer(String.slice(text_value, 0, size - 1), 8)
+
+        String.match?(text_value, ~r/B[0-7]$/) ->
+          String.to_integer(String.slice(text_value, 0, size - 2), 8) <<<
+            (3 * String.to_integer(String.slice(text_value, size - 1, 1)))
+
+        true ->
+          String.to_integer(text_value)
+      end
+
+    value
+  end
 
   def token_type({type, _}), do: type
 
