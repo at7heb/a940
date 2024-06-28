@@ -1,12 +1,13 @@
 defmodule Easm.Ops do
   alias Easm.ADotOut
-  alias Easm.Symbol
+  alias Easm.LexicalLine
   alias Easm.Memory
+  alias Easm.Symbol
 
   import Bitwise
 
   @indirect 0o40000
-  # @index 0o20000000
+  @index 0o20000000
 
   def misc_ops() do
     %{indirect: 0o40000, index: 0o20000000}
@@ -32,7 +33,7 @@ defmodule Easm.Ops do
     end
   end
 
-  def handle_op(%ADotOut{} = aout, {:ok, op_value, address_type}, indirect?) do
+  def handle_op(%ADotOut{} = aout, %LexicalLine{} = _ll, {:ok, op_value, address_type}, indirect?) do
     # handle the op_value; put it in the memory.
     {current_location, relocatable?} = Memory.get_location(aout)
 

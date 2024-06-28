@@ -4,7 +4,11 @@ defmodule Easm.Address do
   alias Easm.Assembly
   alias Easm.LexicalLine
   alias Easm.Lexer
+  alias Easm.Ops
   import Bitwise
+
+  struct type: type: nil, # :number,
+
 
   def handle_address_part(%ADotOut{lines: lines} = aout) do
     cond do
@@ -21,6 +25,18 @@ defmodule Easm.Address do
         )
     end
   end
+
+  def handle_address_part(
+        %ADotOut{} = aout,
+        %LexicalLine{address_tokens: []} = _lex_line
+      ),
+      do: aout
+
+  def handle_address_part(
+        %ADotOut{} = aout,
+        %LexicalLine{address_tokens: [{:asterisk, "*"} | _rest]} = _lex_line
+      ),
+      do: aout
 
   def handle_address_part(
         %ADotOut{} = aout,
@@ -91,15 +107,19 @@ defmodule Easm.Address do
     end
   end
 
-  def address_allowed(%ADotOut{memory: memory} = aout) do
+  def address_allowed(%ADotOut{memory: memory} = _aout) do
     cond do
       Memory.address_field_type(memory) == :no_addr -> false
       true -> true
     end
   end
 
-  def handle_address_constant(%ADotOut{memory: memory} = aout, [constant_value], is_indexed?) do
-    type = Memory.address_field_type(memory)
+  def handle_address_constant(
+        %ADotOut{memory: [recent_word | rest_of_memory]} = aout,
+        [constant_value],
+        is_indexed?
+      ) do
+    type = Memory.address_field_type(recent_word)
     {:number, text_value} = constant_value
     numeric_value = Lexer.number_value(text_value)
 
@@ -111,9 +131,9 @@ defmodule Easm.Address do
         _ -> {:error, "illegal address type in instruction"}
       end
 
-    new_word = Memory.content(memory) + masked_constant_value + Ops.index_bit(is_indexed?)
-    new_memory = Memory.update_content(memory, new_word)
-    %{aout | memory: new_memory}
+    new_value = Memory.content(recent_word) + masked_constant_value + Ops.index_bit(is_indexed?)
+    new_word = Memory.update_content(recent_word, new_value)
+    %{aout | memory: [new_word | rest_of_memory]}
   end
 
   def handle_address_literal(%ADotOut{memory: memory} = aout, literal_tokens, is_indexed?) do
@@ -122,6 +142,6 @@ defmodule Easm.Address do
   def handle_address_symbol(%ADotOut{memory: memory} = aout, symbol_token, is_indexed?) do
   end
 
-  def handle_address_expression(%ADotOut{memory: memory} = aout, expression_tokens, is_indexed?) do
+  def handle_address_expression(%ADotOut{} = aout, _expression_tokens, _is_indexed?) do
   end
 end

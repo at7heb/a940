@@ -128,7 +128,7 @@ defmodule Easm.Assembly do
 
   def handle_operator_part(
         %ADotOut{} = aout,
-        %LexicalLine{operation_tokens: op_tokens} = _lex_line
+        %LexicalLine{operation_tokens: op_tokens} = lex_line
       ) do
     {op0, op1} = {hd(op_tokens), Enum.at(op_tokens, 1)}
 
@@ -140,10 +140,10 @@ defmodule Easm.Assembly do
     {new_aout, okay?} =
       cond do
         is_pseudo != :not_pseudo and is_indirect == false ->
-          {Pseudos.handle_pseudo(aout, is_pseudo), true}
+          {Pseudos.handle_pseudo(aout, lex_line, is_pseudo), true}
 
         is_op != :not_op ->
-          {Ops.handle_op(aout, is_op, is_indirect), true}
+          {Ops.handle_op(aout, is_op, lex_line, is_indirect), true}
 
         true ->
           {aout, false}

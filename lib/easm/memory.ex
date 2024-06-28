@@ -48,16 +48,11 @@ defmodule Easm.Memory do
     hd(memory).address_field_type
   end
 
-  def content(memory) when is_list(memory) do
-    hd(memory).content
-  end
+  def content(%Memory{} = memory), do: memory.content
 
   def update_content(%Memory{} = memory, content)
-      when is_integer(content) and content > 0 and content < 16_777_216 do
-    %{memory | content: content}
-  end
+      when is_integer(content) and content > 0 and content < 16_777_216,
+      do: %{memory | content: content}
 
-  def replace_memory([_hd | rest] = _memory, %Memory{} = new_word) do
-    [new_word | rest]
-  end
+  def replace_memory([_hd | rest] = _memory, %Memory{} = new_word), do: [new_word | rest]
 end

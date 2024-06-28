@@ -1,7 +1,8 @@
 defmodule Easm.Pseudos do
   alias Easm.ADotOut
-  alias Easm.Symbol
+  alias Easm.LexicalLine
   alias Easm.Memory
+  alias Easm.Symbol
 
   def pseudo_op_lookup(op) when is_binary(op) do
     op_type = Map.get(pseudo_op_map(), op)
@@ -12,7 +13,7 @@ defmodule Easm.Pseudos do
     end
   end
 
-  def handle_pseudo(%ADotOut{} = aout, {:ok, pseudo_type}) do
+  def handle_pseudo(%ADotOut{} = aout, %LexicalLine{} = _ll, {:ok, pseudo_type}) do
     memory_entry =
       Memory.memory(false, 16384, 0o77_777_777, %Symbol{}, :shift, {:pseudo_op, pseudo_type})
 
