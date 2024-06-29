@@ -23,6 +23,8 @@ defmodule Easm.ADotOut do
   # each memory has {:relocatable, address, content} or {:absolute, address, content}
   # flags can have :absolute_location, :relative_location, :export_symbol
 
+  def new(), do: %ADotOut{}
+
   def increment_current_location(
         %ADotOut{absolute_location: absolute_location, relocatable_location: relocatable_location} =
           aout,

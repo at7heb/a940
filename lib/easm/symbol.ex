@@ -8,8 +8,8 @@ defmodule Easm.Symbol do
   # It will have a value after B1END and B1BEG are known
   #
   # For code like "A EQU 500", :state will be :known
-  # :state is :defined before it is :known.
-  # :state may be :defined when the aout file is delivered to the link editor.
+  # :state is :unknown, then :defined, then :known.
+  # :state must be :defined or :known when the aout file is delivered to the link editor.
 
   alias Easm.Symbol
 
@@ -48,7 +48,8 @@ defmodule Easm.Symbol do
     }
   end
 
-  def new(symbol_value \\ nil, tokens \\ [], state \\ :known) do
+  def new(symbol_value \\ nil, tokens \\ [], state \\ :unknown) do
+    %Symbol{value: symbol_value, state: state, definition: tokens, relocatable: false}
   end
 
   def generate_name(:literal), do: "L_" <> Uniq.UUID.uuid1()

@@ -6,6 +6,55 @@ defmodule Easm.Ops do
 
   import Bitwise
 
+  def handle_operator_part(%ADotOut{file_ok: false} = aout) do
+    aout
+  end
+
+  # cases
+  # operator
+  # operator asterisk
+  def handle_operator_part(%ADotOut{lines: lines} = aout) do
+    cond do
+      Assembly.has_flag?(aout, :done) ->
+        aout
+
+      true ->
+        current_line = Map.get(lines, :current_line)
+
+        handle_operator_part(
+          aout,
+          Map.get(lines, current_line)
+        )
+    end
+  end
+
+  def handle_operator_part(
+        %ADotOut{} = aout,
+        %LexicalLine{operation_tokens: op_tokens} = lex_line
+      ) do
+    {op0, op1} = {hd(op_tokens), Enum.at(op_tokens, 1)}
+
+    {:symbol, op} = op0
+    is_pseudo = Pseudos.pseudo_op_lookup(op)
+    is_op = Ops.op_lookup(op)
+    is_indirect = Ops.op_indirect(op1)
+
+    {new_aout, okay?} =
+      cond do
+        is_pseudo != :not_pseudo and is_indirect == false ->
+          {Pseudos.handle_pseudo(aout, lex_line, is_pseudo), true}
+
+        is_op != :not_op ->
+          {Ops.handle_op(aout, is_op, lex_line, is_indirect), true}
+
+        true ->
+          {aout, false}
+      end
+
+    # {tokens, is_pseudo, is_op}
+    Assembly.finish_part(new_aout, okay?)
+  end
+
   @indirect 0o40000
   @index 0o20000000
 
