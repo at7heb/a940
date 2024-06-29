@@ -7,9 +7,6 @@ defmodule Easm.Address do
   alias Easm.Ops
   import Bitwise
 
-  struct type: type: nil, # :number,
-
-
   def handle_address_part(%ADotOut{lines: lines} = aout) do
     cond do
       Assembly.has_flag?(aout, :done) ->
@@ -21,6 +18,7 @@ defmodule Easm.Address do
       true ->
         handle_address_part(
           aout,
+          lines.current_line,
           Map.get(lines, lines.current_line)
         )
     end
@@ -28,20 +26,24 @@ defmodule Easm.Address do
 
   def handle_address_part(
         %ADotOut{} = aout,
+        current_line,
         %LexicalLine{address_tokens: []} = _lex_line
       ),
       do: aout
 
   def handle_address_part(
         %ADotOut{} = aout,
+        current_line,
         %LexicalLine{address_tokens: [{:asterisk, "*"} | _rest]} = _lex_line
       ),
       do: aout
 
   def handle_address_part(
         %ADotOut{} = aout,
+        current_line,
         %LexicalLine{address_tokens: addr_tokens} = _lex_line
-      ) do
+      )
+      when is_integer(current_line) do
     {is_indexed?, non_indexed_addr_tokens} = is_indexed(addr_tokens)
     {is_constant?, constant_value} = is_constant(non_indexed_addr_tokens)
     {is_literal?, literal_tokens} = is_literal(non_indexed_addr_tokens)
@@ -49,10 +51,17 @@ defmodule Easm.Address do
     {is_expression?, expression_tokens} = is_expression(non_indexed_addr_tokens)
 
     cond do
-      is_constant? -> handle_address_constant(aout, constant_value, is_indexed?)
-      is_literal? -> handle_address_literal(aout, literal_tokens, is_indexed?)
-      is_symbol? -> handle_address_symbol(aout, symbol_token, is_indexed?)
-      is_expression? -> handle_address_expression(aout, expression_tokens, is_indexed?)
+      is_constant? ->
+        handle_address_constant(aout, constant_value, is_indexed?)
+
+      is_literal? ->
+        handle_address_literal(aout, current_line, literal_tokens, is_indexed?)
+
+      is_symbol? ->
+        handle_address_symbol(aout, symbol_token, is_indexed?)
+
+      is_expression? ->
+        handle_address_expression(aout, current_line, expression_tokens, is_indexed?)
     end
   end
 
@@ -136,12 +145,29 @@ defmodule Easm.Address do
     %{aout | memory: [new_word | rest_of_memory]}
   end
 
-  def handle_address_literal(%ADotOut{memory: memory} = aout, literal_tokens, is_indexed?) do
+  def handle_address_literal(
+        %ADotOut{memory: memory} = aout,
+        current_line,
+        [{:operator, "="}, {:number, number_text}] = tokens,
+        is_indexed?
+      ) do
+    symbol_value = Lexer.number_value(number_text)
+    symbol_name = Symbol.generate_name(:literal)
+    new_symbol = Symbol.new(symbol_value, tokens, :known)
+    ADotOut.add_symbol(aout, symbol_name, new_symbol)
+  end
+
+  def handle_address_literal(
+        %ADotOut{memory: memory} = aout,
+        current_line,
+        literal_tokens,
+        is_indexed?
+      ) do
   end
 
   def handle_address_symbol(%ADotOut{memory: memory} = aout, symbol_token, is_indexed?) do
   end
 
-  def handle_address_expression(%ADotOut{} = aout, _expression_tokens, _is_indexed?) do
+  def handle_address_expression(%ADotOut{} = aout, current_line, _expression_tokens, _is_indexed?) do
   end
 end

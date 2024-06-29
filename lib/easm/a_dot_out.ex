@@ -1,4 +1,5 @@
 defmodule Easm.ADotOut do
+  alias Easm.Symbol
   alias Easm.ADotOut
 
   defstruct memory: [],
@@ -32,5 +33,9 @@ defmodule Easm.ADotOut do
       :relocatable -> %{aout | relocatable_location: relocatable_location + increment}
       _ -> aout
     end
+  end
+
+  def add_symbol(%ADotOut{} = aout, %Symbol{} = symbol) do
+    aout
   end
 end
