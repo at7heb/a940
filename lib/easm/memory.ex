@@ -1,21 +1,21 @@
 defmodule Easm.Memory do
   alias Easm.Memory
   alias Easm.ADotOut
-  alias Easm.Symbol
+  # alias Easm.Symbol
 
   defstruct relocatable?: false,
             location: 0,
             content: 999_999_999,
             # address_field_type is one of :no_addr, :shift_addr, :rch_addr, or :mem_addr
             address_field_type: :no_addr,
-            address_symbol: Symbol,
+            symbol_name: "",
             end_action: {}
 
   def memory(
         relocatable?,
         location,
         content,
-        %Symbol{} = address_symbol,
+        symbol_name,
         address_type,
         end_action \\ nil
       ) do
@@ -24,7 +24,7 @@ defmodule Easm.Memory do
       location: location,
       content: content,
       address_field_type: address_type,
-      address_symbol: address_symbol,
+      symbol_name: symbol_name,
       end_action: end_action
     }
   end
@@ -48,7 +48,7 @@ defmodule Easm.Memory do
     hd(memory).address_field_type
   end
 
-  def content(%Memory{} = memory), do: memory.content
+  def get_content(%Memory{} = memory), do: memory.content
 
   def update_content(%Memory{} = memory, content)
       when is_integer(content) and content > 0 and content < 16_777_216,

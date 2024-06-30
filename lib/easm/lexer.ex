@@ -22,7 +22,7 @@ defmodule Easm.Lexer do
 
   def tokens("", token_list), do: Enum.reverse(token_list)
 
-  def tokens(line, [{:asterisk, "*"}] = tokens), do: [tokens | [{:comment, line}]]
+  def tokens(line, [{:asterisk, "*"}] = tokens), do: [hd(tokens) | [{:comment, line}]]
 
   def tokens(line, token_list) do
     white_space_count =
@@ -216,6 +216,7 @@ defmodule Easm.Lexer do
   def token_value({_, value}), do: value
 
   def is_comment?(tokens) when is_list(tokens) do
+    tokens |> dbg
     number_of_tokens = length(tokens)
 
     cond do

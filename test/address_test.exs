@@ -15,8 +15,15 @@ defmodule AddressTest do
     [
       {[{:symbol, "A"}, {:operator, ","}, {:number, "2"}], {true, [{:symbol, "A"}]},
        {false, :ditto}, {false, :ditto}, {false, :ditto}, {false, :ditto}},
-      {[{:number, "100"}], {false, :ditto}, {true, [{:number, "100"}]}, {false, :ditto},
-       {false, :ditto}, {false, :ditto}},
+      {[{:number, "100"}], {false, :ditto},
+       {true,
+        %Easm.Address{
+          type: :constant,
+          constant: 100,
+          symbol_name: "",
+          symbol: nil,
+          indexed?: false
+        }}, {false, :ditto}, {false, :ditto}, {false, :ditto}},
       {[{:operator, "="}, {:number, "100"}], {false, :ditto}, {false, :ditto},
        {true, [{:number, "100"}]}, {false, :ditto}, {false, :ditto}},
       {[{:operator, "="}, {:number, "100"}, {:operator, "+"}, {:symbol, "LEN1"}], {false, :ditto},
@@ -48,7 +55,7 @@ defmodule AddressTest do
         # {num, is?, val} |> dbg
         {is_result, val_result} = fun.(test_input)
 
-        # {num, is_result, val_result} |> dbg
+        # {num, is?, val, is_result, val_result, test_input} |> dbg
 
         assert is_result == is? and
                  (val_result == val or (val == :ditto and val_result == test_input))

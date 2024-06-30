@@ -3,8 +3,8 @@ defmodule Easm.Assembly do
   alias Easm.ADotOut
   alias Easm.Symbol
   alias Easm.Ops
-  alias Easm.Pseudos
-  alias Easm.Address
+  # alias Easm.Pseudos
+  # alias Easm.Address
   alias Easm.Lexer
   # alias Easm.Memory
 
@@ -31,6 +31,10 @@ defmodule Easm.Assembly do
     {%LexicalLine{} = line_lex, _line_position, token} = get_token_info(aout)
 
     cond do
+      token == [] ->
+        "null line" |> dbg
+        finish_comment_line(aout, line_lex.original)
+
       token == {:asterisk, "*"} ->
         finish_comment_line(aout, line_lex.original)
 
@@ -38,19 +42,6 @@ defmodule Easm.Assembly do
         aout
     end
   end
-
-  # def parse_out_parts(%ADotOut{} = aout) do
-  #   cond do
-  #     has_flag?(aout, :done) ->
-  #       aout
-
-  #     true ->
-  #       line_number = Map.get(aout.lines, :current_line) |> dbg
-  #       new_line = Map.get(aout.lines, line_number) |> Lexer.find_parts() |> dbg
-  #       new_lines = Map.put(aout.lines, line_number, new_line) |> dbg
-  #       %{aout | lines: new_lines}
-  #   end
-  # end
 
   def handle_label_part(%ADotOut{} = aout) do
     # handle 3 cases:
@@ -93,7 +84,7 @@ defmodule Easm.Assembly do
         Lexer.token_value(hd(label_tokens)) == "$" and
           Lexer.token_type(Enum.at(label_tokens, 1)) == :symbol ->
         symbol_name = Lexer.token_value(Enum.at(label_tokens, 1))
-        symbol_value = %{Symbol.symbol(aout) | type: :exported}
+        symbol_value = %{Symbol.symbol(aout) | exported: true}
 
         update_symbol_table(aout, symbol_name, symbol_value)
         |> finish_part()
@@ -124,6 +115,9 @@ defmodule Easm.Assembly do
     cond do
       already_listed ->
         "already listed; line_ok = #{Map.get(aout.lines, :line_ok)}" |> dbg
+
+      aout.memory == [] ->
+        "no memory" |> dbg
 
       true ->
         mem = hd(aout.memory)
@@ -243,7 +237,7 @@ defmodule Easm.Assembly do
           symbol_value
 
         existing_symbol.known == false ->
-          %{Symbol.symbol() | known: {:error, :multiply_defined}}
+          %{Symbol.symbol() | state: {:error, :multiply_defined}}
       end
 
     new_symbols = Map.put(symbols, symbol, new_symbol_value)

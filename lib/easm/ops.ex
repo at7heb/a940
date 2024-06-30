@@ -3,6 +3,9 @@ defmodule Easm.Ops do
   alias Easm.LexicalLine
   alias Easm.Memory
   alias Easm.Symbol
+  alias Easm.Assembly
+  alias Easm.Pseudos
+  alias Easm.Address
 
   import Bitwise
 
@@ -32,20 +35,34 @@ defmodule Easm.Ops do
         %ADotOut{} = aout,
         %LexicalLine{operation_tokens: op_tokens} = lex_line
       ) do
+    cond do
+      Assembly.has_flag?(aout, :done) or op_tokens == [] ->
+        aout
+
+      true ->
+        handle_operator_part_ext(aout, lex_line)
+    end
+  end
+
+  def handle_operator_part_ext(
+        %ADotOut{} = aout,
+        %LexicalLine{operation_tokens: op_tokens} = lex_line
+      ) do
     {op0, op1} = {hd(op_tokens), Enum.at(op_tokens, 1)}
 
     {:symbol, op} = op0
-    is_pseudo = Pseudos.pseudo_op_lookup(op)
-    is_op = Ops.op_lookup(op)
-    is_indirect = Ops.op_indirect(op1)
+    info_pseudo = Pseudos.pseudo_op_lookup(op)
+    is_op = op_lookup(op)
+    is_indirect = op_indirect(op1)
 
     {new_aout, okay?} =
       cond do
-        is_pseudo != :not_pseudo and is_indirect == false ->
-          {Pseudos.handle_pseudo(aout, lex_line, is_pseudo), true}
+        info_pseudo != :not_pseudo and is_indirect == false ->
+          {Pseudos.handle_pseudo(aout, lex_line, info_pseudo), true}
 
         is_op != :not_op ->
-          {Ops.handle_op(aout, is_op, lex_line, is_indirect), true}
+          {_, operator, address_type} = is_op
+          {handle_op(aout, lex_line, operator, address_type, is_indirect), true}
 
         true ->
           {aout, false}
@@ -82,7 +99,9 @@ defmodule Easm.Ops do
     end
   end
 
-  def handle_op(%ADotOut{} = aout, %LexicalLine{} = _ll, {:ok, op_value, address_type}, indirect?) do
+  # handle_op(aout, lex_line, operator, address_type, is_indirect)
+
+  def handle_op(%ADotOut{} = aout, %LexicalLine{} = _ll, op_value, :no_addr, _indirect?) do
     # handle the op_value; put it in the memory.
     {current_location, relocatable?} = Memory.get_location(aout)
 
@@ -90,12 +109,52 @@ defmodule Easm.Ops do
       Memory.memory(
         relocatable?,
         current_location,
-        op_value ||| indirect_value(indirect?),
+        op_value,
         %Symbol{},
-        address_type
+        :no_addr
       )
 
     %{aout | memory: [memory_entry | aout.memory]} |> ADotOut.increment_current_location()
+    # can add symbol, indirect, or indexed to hd(aout.memory).
+  end
+
+  def handle_op(
+        %ADotOut{} = aout,
+        %LexicalLine{} = _ll,
+        op_value,
+        :mem_addr,
+        indirect?
+      ) do
+    # handle the op_value; put it in the memory.
+    {current_location, relocatable?} = Memory.get_location(aout)
+
+    address = Address.get_address(aout)
+    address |> dbg
+
+    new_op_value =
+      cond do
+        address.type == :constant ->
+          op_value ||| address.constant ||| index_bit(address.indexed?) |||
+            indirect_bit(indirect?)
+
+        # ||| index_bit(indexed?)
+        true ->
+          op_value
+      end
+
+    memory_entry =
+      Memory.memory(
+        relocatable?,
+        current_location,
+        new_op_value,
+        address.symbol_name,
+        :mem_addr
+      )
+
+    %{aout | memory: [memory_entry | aout.memory]}
+    |> ADotOut.increment_current_location()
+    |> ADotOut.handle_address_symbol(address.symbol_name, address.symbol)
+
     # can add symbol, indirect, or indexed to hd(aout.memory).
   end
 
@@ -105,7 +164,7 @@ defmodule Easm.Ops do
 
   def op_indirect({_, _}), do: false
 
-  def indirect_value(indirect?) when is_boolean(indirect?) do
+  def indirect_bit(indirect?) when is_boolean(indirect?) do
     cond do
       indirect? -> @indirect
       true -> 0

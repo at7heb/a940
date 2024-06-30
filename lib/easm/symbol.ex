@@ -1,7 +1,13 @@
 defmodule Easm.Symbol do
   alias Easm.ADotOut
+  alias Easm.Lexer
 
-  defstruct state: false, value: [1_000_000_000], relocatable: true, definition: []
+  defstruct state: false,
+            value: [1_000_000_000],
+            relocatable: true,
+            definition: [],
+            exported: false
+
   # type should include :exported and :imported
   # store in a map, and then the symbol is redundant
   # For code like "A EQU B1END-B1BEG, definition will have the tokens [{:symbol, "B1END},{:operator, "-"},{:symbol, "B1BEG"}]
