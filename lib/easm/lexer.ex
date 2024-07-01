@@ -1,5 +1,6 @@
 defmodule Easm.Lexer do
   alias Easm.LexicalLine
+  alias Easm.ADotOut
   import Bitwise
 
   def analyze(lines) when is_list(lines) do
@@ -37,6 +38,10 @@ defmodule Easm.Lexer do
 
   def tokens_no_short_circuit(line, token_list) do
     cond do
+      false != match_number(line) ->
+        {true, token, rest_of_line} = match_number(line)
+        tokens(rest_of_line, [token | token_list])
+
       false != match_operator(line) ->
         {true, token, rest_of_line} = match_operator(line)
         tokens(rest_of_line, [token | token_list])
@@ -47,10 +52,6 @@ defmodule Easm.Lexer do
 
       false != match_octal_number(line) ->
         {true, token, rest_of_line} = match_octal_number(line)
-        tokens(rest_of_line, [token | token_list])
-
-      false != match_number(line) ->
-        {true, token, rest_of_line} = match_number(line)
         tokens(rest_of_line, [token | token_list])
 
       false != match_white_space(line) ->
@@ -92,14 +93,14 @@ defmodule Easm.Lexer do
   end
 
   def match_octal_number(line) when is_binary(line) do
-    case Regex.run(~r{^([0-7]+B[0-9]?)(.*)$}, line, capture: :all_but_first) do
+    case Regex.run(~r{^(-?[0-7]+B[0-9]?)(.*)$}, line, capture: :all_but_first) do
       [token, rest] -> {true, {:octal_number, token}, rest}
       _ -> false
     end
   end
 
   def match_number(line) when is_binary(line) do
-    case Regex.run(~r{^([0-9]+D?)(.*)$}, line, capture: :all_but_first) do
+    case Regex.run(~r{^(-?[0-9]+D?)(.*)$}, line, capture: :all_but_first) do
       [token, rest] -> {true, {:number, token}, rest}
       _ -> false
     end
@@ -249,5 +250,9 @@ defmodule Easm.Lexer do
 
   def no_tokens(%LexicalLine{} = lexical_line) do
     %{lexical_line | label_tokens: [], operation_tokens: [], address_tokens: []}
+  end
+
+  def clean_for_new_statement(%ADotOut{} = aout) do
+    aout
   end
 end

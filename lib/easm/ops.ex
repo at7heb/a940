@@ -114,7 +114,10 @@ defmodule Easm.Ops do
         :no_addr
       )
 
-    %{aout | memory: [memory_entry | aout.memory]} |> ADotOut.increment_current_location()
+    %{aout | memory: [memory_entry | aout.memory]}
+    |> ADotOut.update_label_in_symbol_table()
+    |> ADotOut.increment_current_location()
+
     # can add symbol, indirect, or indexed to hd(aout.memory).
   end
 
@@ -134,7 +137,7 @@ defmodule Easm.Ops do
     new_op_value =
       cond do
         address.type == :constant ->
-          op_value ||| address.constant ||| index_bit(address.indexed?) |||
+          op_value ||| (address.constant &&& 0o37777) ||| index_bit(address.indexed?) |||
             indirect_bit(indirect?)
 
         # ||| index_bit(indexed?)
@@ -152,6 +155,7 @@ defmodule Easm.Ops do
       )
 
     %{aout | memory: [memory_entry | aout.memory]}
+    |> ADotOut.update_label_in_symbol_table()
     |> ADotOut.increment_current_location()
     |> ADotOut.handle_address_symbol(address.symbol_name, address.symbol)
 
@@ -411,5 +415,9 @@ defmodule Easm.Ops do
       "SYSPOP76" => {0o57600000, :mem_addr},
       "SYSPOP77" => {0o57700000, :mem_addr}
     }
+  end
+
+  def clean_for_new_statement(%ADotOut{} = aout) do
+    aout
   end
 end

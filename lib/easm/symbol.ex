@@ -16,6 +16,10 @@ defmodule Easm.Symbol do
   # For code like "A EQU 500", :state will be :known
   # :state is :unknown, then :defined, then :known.
   # :state must be :defined or :known when the aout file is delivered to the link editor.
+  # for expressions, :state will :defined and value will be nil.
+  # later, :state will be :known and value will be set
+  # if one of the symbols is external, the expression will go into a.out
+  # for A in A EQU B, state will be [{:symbol, "B"}]
 
   alias Easm.Symbol
 

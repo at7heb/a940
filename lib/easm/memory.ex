@@ -48,6 +48,10 @@ defmodule Easm.Memory do
     hd(memory).address_field_type
   end
 
+  def clean_for_new_statement(%ADotOut{} = aout) do
+    aout
+  end
+
   def get_content(%Memory{} = memory), do: memory.content
 
   def update_content(%Memory{} = memory, content)

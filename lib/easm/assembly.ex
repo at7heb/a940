@@ -6,11 +6,12 @@ defmodule Easm.Assembly do
   # alias Easm.Pseudos
   # alias Easm.Address
   alias Easm.Lexer
-  # alias Easm.Memory
+  alias Easm.Memory
 
   def assemble_lexons(%ADotOut{} = aout, line_number) when is_integer(line_number) do
     lexon_cursor = get_cursor(aout)
     IO.puts("assemble_lexons line #{line_number} lexon #{lexon_cursor}")
+    Map.get(aout.lines, line_number) |> dbg
 
     cond do
       Map.get(aout.lines, line_number, nil) == nil ->
@@ -18,11 +19,15 @@ defmodule Easm.Assembly do
         add_flag(aout, :done)
 
       true ->
+        aout
+        |> clean_for_new_statement()
+
         recognize_comment(aout)
         # |> parse_out_parts()
         |> handle_label_part()
         |> Ops.handle_operator_part()
-        # |> Address.handle_address_part()
+        # |> resolve_addresses()
+        # |> update_memory()
         |> update_aout()
     end
   end
@@ -49,7 +54,7 @@ defmodule Easm.Assembly do
     # label whitespace
     # $label whitespace
     # after the whitespace, there will be a pseudo or real operator.
-    # So thee may be only 2 tokens in a line: whitespace and op
+    # So there may be only 2 tokens in a line: whitespace and op
     # a solo whitespace token should already have been eliminated by the string trimming.
     cond do
       has_flag?(aout, :done) ->
@@ -77,7 +82,8 @@ defmodule Easm.Assembly do
         symbol_name = Lexer.token_value(hd(label_tokens))
         symbol_value = Symbol.symbol(aout)
 
-        update_symbol_table(aout, symbol_name, symbol_value)
+        %{aout | label: symbol_name}
+        |> update_symbol_table(symbol_name, symbol_value)
         |> finish_part()
 
       n_tokens == 2 and Lexer.token_type(hd(label_tokens)) == :operator and
@@ -86,7 +92,8 @@ defmodule Easm.Assembly do
         symbol_name = Lexer.token_value(Enum.at(label_tokens, 1))
         symbol_value = %{Symbol.symbol(aout) | exported: true}
 
-        update_symbol_table(aout, symbol_name, symbol_value)
+        %{aout | label: symbol_name}
+        |> update_symbol_table(symbol_name, symbol_value)
         |> finish_part()
 
       true ->
@@ -107,6 +114,15 @@ defmodule Easm.Assembly do
       flag not in flags -> %{aout | flags: [flag | flags]}
       true -> aout
     end
+  end
+
+  def clean_for_new_statement(%ADotOut{} = aout) do
+    aout
+    |> Memory.clean_for_new_statement()
+    |> LexicalLine.clean_for_new_statement()
+    |> ADotOut.clean_for_new_statement()
+    |> Lexer.clean_for_new_statement()
+    |> Ops.clean_for_new_statement()
   end
 
   def listing(%ADotOut{} = aout) do

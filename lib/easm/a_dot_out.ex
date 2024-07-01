@@ -13,7 +13,7 @@ defmodule Easm.ADotOut do
             relocatable_location: 0,
             needs: [:ident, :end],
             # the label defined in current statement;
-            label: "THELABEL",
+            label: "",
             # line_ok: true,
             file_ok: true,
             listing: [],
@@ -60,5 +60,28 @@ defmodule Easm.ADotOut do
       when is_binary(symbol_name) do
     # this should be private to guarantee that symbol_name isn't in the map yet!
     %{aout | symbols: Map.put(symbols, symbol_name, symbol)}
+  end
+
+  def update_label_in_symbol_table(%ADotOut{label: ""} = aout), do: aout
+  def update_label_in_symbol_table(%ADotOut{label: nil} = aout), do: aout
+
+  def update_label_in_symbol_table(%ADotOut{symbols: symbols, label: symbol_name} = aout) do
+    {symbols, symbol_name} |> dbg
+
+    {location, relocatable} =
+      cond do
+        aout.relocation_reference == :relocatable -> {aout.relocatable_location, true}
+        true -> {aout.absolute_location, false}
+      end
+
+    symbol = Map.get(symbols, symbol_name)
+    new_symbol = %{symbol | value: location, relocatable: relocatable}
+    new_symbols = Map.put(aout.symbols, symbol_name, new_symbol)
+    new_symbols |> dbg
+    %{aout | symbols: new_symbols}
+  end
+
+  def clean_for_new_statement(%ADotOut{} = aout) do
+    %{aout | label: ""}
   end
 end

@@ -26,6 +26,7 @@ defmodule Easm.Pseudos do
       "IDENT" => {:ident, :no_addr},
       "END" => {:end, :no_addr},
       "EQU" => {:equ, :expression},
+      "EXT" => {:ext, :symbol_list},
       "DATA" => {:data, :number_list},
       "BSS" => {:bss, :expression},
       "ASC" => {:asc, :quoted_string},

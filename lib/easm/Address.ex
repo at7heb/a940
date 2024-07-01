@@ -43,7 +43,6 @@ defmodule Easm.Address do
       symbol: symbol,
       indexed?: indexed?
     }
-    |> dbg
   end
 
   def get_address(%ADotOut{lines: lines} = aout) do
@@ -56,7 +55,7 @@ defmodule Easm.Address do
 
   def get_address(%ADotOut{} = _aout, current_line, %LexicalLine{address_tokens: []} = _lex_line)
       when is_integer(current_line),
-      do: {new(:no_address)}
+      do: new(:no_address)
 
   def get_address(
         %ADotOut{} = aout,
@@ -69,11 +68,10 @@ defmodule Easm.Address do
     {is_literal?, literal_tokens} = is_literal(non_indexed_addr_tokens)
     {is_symbol?, symbol_token} = is_symbol(non_indexed_addr_tokens)
     {is_expression?, expression_tokens} = is_expression(non_indexed_addr_tokens)
-    {is_symbol?, symbol_token} |> dbg
 
     cond do
       is_constant? ->
-        constant_value
+        %{constant_value | indexed?: is_indexed?}
 
       is_literal? ->
         literal_address(aout, current_line, literal_tokens, is_indexed?)
@@ -84,6 +82,7 @@ defmodule Easm.Address do
       is_expression? ->
         address_expression(aout, current_line, expression_tokens, is_indexed?)
     end
+    |> dbg
   end
 
   def literal_address(%ADotOut{} = _aout, current_line, tokens, is_indexed?)
@@ -115,6 +114,7 @@ defmodule Easm.Address do
   def address_expression(%ADotOut{} = _aout, current_line, tokens, is_indexed?)
       when is_integer(current_line) and is_list(tokens) do
     {tokens, is_indexed?, "expression address"} |> dbg
+    symbol = Symbol.new()
     {:constant, 100}
   end
 
