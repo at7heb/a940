@@ -51,9 +51,9 @@ defmodule Easm.ADotOut do
     end
   end
 
-  def handle_address_symbol(%ADotOut{} = aout, name, value) do
-    {"name #{name} and value #{value} do not compute"} |> dbg
-    aout
+  def handle_address_symbol(%ADotOut{} = _aout, name, value) do
+    {"name and value do not compute", name, value} |> dbg
+    raise "symbol name and value do not compute"
   end
 
   def add_symbol(%ADotOut{symbols: symbols} = aout, symbol_name, %Symbol{} = symbol)

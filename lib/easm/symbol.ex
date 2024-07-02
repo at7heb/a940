@@ -46,6 +46,13 @@ defmodule Easm.Symbol do
     symbol_relative(aout, -1, Lexer.number_value(number_text), tokens)
   end
 
+  def symbol_by_expression(
+        %ADotOut{} = _aout,
+        [{:askterisk, _}, {:operator, "-"}, {:askterisk, _}] = tokens
+      ) do
+    %Symbol{value: 0, state: :known, relocatable: false, definition: tokens}
+  end
+
   def symbol_relative(%ADotOut{} = aout, mult, offset, tokens)
       when is_integer(mult) and is_integer(offset) and is_list(tokens) do
     {location, relocatable?} = Easm.Memory.get_location(aout)

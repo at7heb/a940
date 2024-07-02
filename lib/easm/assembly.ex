@@ -11,7 +11,8 @@ defmodule Easm.Assembly do
   def assemble_lexons(%ADotOut{} = aout, line_number) when is_integer(line_number) do
     lexon_cursor = get_cursor(aout)
     IO.puts("assemble_lexons line #{line_number} lexon #{lexon_cursor}")
-    Map.get(aout.lines, line_number) |> dbg
+    # |> dbg
+    Map.get(aout.lines, line_number)
 
     cond do
       Map.get(aout.lines, line_number, nil) == nil ->
@@ -37,7 +38,7 @@ defmodule Easm.Assembly do
 
     cond do
       token == [] ->
-        "null line" |> dbg
+        # "null line" |> dbg
         finish_comment_line(aout, line_lex.original)
 
       token == {:asterisk, "*"} ->

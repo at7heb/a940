@@ -1,10 +1,4 @@
 defmodule Easm.Address do
-  defstruct type: 0,
-            constant: 0,
-            symbol_name: "",
-            symbol: nil,
-            indexed?: false
-
   alias Easm.Memory
   alias Easm.ADotOut
   alias Easm.Assembly
@@ -14,6 +8,12 @@ defmodule Easm.Address do
   alias Easm.Symbol
   alias Easm.Address
   import Bitwise
+
+  defstruct type: 0,
+            constant: 0,
+            symbol_name: "",
+            symbol: Symbol,
+            indexed?: false
 
   @moduledoc """
    handle the address part of the statement.
@@ -33,7 +33,7 @@ defmodule Easm.Address do
         type \\ :unknown,
         constant \\ 0,
         symbol_name \\ "",
-        symbol \\ nil,
+        symbol \\ %Symbol{},
         indexed? \\ false
       ) do
     %Address{
@@ -82,7 +82,8 @@ defmodule Easm.Address do
       is_expression? ->
         address_expression(aout, current_line, expression_tokens, is_indexed?)
     end
-    |> dbg
+
+    # |> dbg
   end
 
   def literal_address(%ADotOut{} = _aout, current_line, tokens, is_indexed?)
@@ -114,8 +115,23 @@ defmodule Easm.Address do
   def address_expression(%ADotOut{} = _aout, current_line, tokens, is_indexed?)
       when is_integer(current_line) and is_list(tokens) do
     {tokens, is_indexed?, "expression address"} |> dbg
-    symbol = Symbol.new()
-    {:constant, 100}
+
+    symbol =
+      Symbol.new(
+        state: :defined,
+        value: nil,
+        relocatable: true,
+        definition: tokens,
+        exported: false
+      )
+
+    new(
+      :referenced,
+      0,
+      Symbol.generate_name(:expression),
+      struct(Symbol, symbol.value),
+      is_indexed?
+    )
   end
 
   def is_indexed(addr_tokens) when is_list(addr_tokens) do
