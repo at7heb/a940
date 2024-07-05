@@ -5,6 +5,7 @@ defmodule Easm.Symbol do
   defstruct state: false,
             value: [1_000_000_000],
             relocatable: true,
+            relocation: 0,
             definition: [],
             exported: false
 

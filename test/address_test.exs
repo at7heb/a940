@@ -1,7 +1,7 @@
 defmodule AddressTest do
   use ExUnit.Case
   doctest Easm.Address
-  alias Easm.Lexer
+  # alias Easm.Lexer
   alias Easm.Address
 
   # data for all these

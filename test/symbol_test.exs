@@ -2,7 +2,7 @@ defmodule SymbolTest do
   use ExUnit.Case
   doctest Easm.Symbol
   alias Easm.ADotOut
-  alias Easm.Lexer
+  # alias Easm.Lexer
   alias Easm.Symbol
 
   test "create addresses" do

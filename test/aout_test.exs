@@ -1,7 +1,7 @@
 defmodule AoutTest do
   use ExUnit.Case
   doctest Easm.ADotOut
-  alias Easm.Lexer
+  # alias Easm.Lexer
   alias Easm.Symbol
   alias Easm.ADotOut
 
