@@ -68,7 +68,7 @@ When processing tokens, the token in hand should be of a category that is in the
 Tests should be written for this stuff:
 
 1. priority({:operator, op} = operator_token)
-1. is_lower_priority?(operator_token0, operator_token1)
+1. compare_priorities(operator_token0, operator_token1)
 1. handle_one_token when the token will cause
 a. operator push
 b. value push

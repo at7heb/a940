@@ -21,7 +21,14 @@ defmodule AddressTest do
           type: :constant,
           constant: 100,
           symbol_name: "",
-          symbol: nil,
+          symbol: %Easm.Symbol{
+            state: false,
+            value: [1_000_000_000],
+            relocatable: true,
+            relocation: 0,
+            definition: [],
+            exported: false
+          },
           indexed?: false
         }}, {false, :ditto}, {false, :ditto}, {false, :ditto}},
       {[{:operator, "="}, {:number, "100"}], {false, :ditto}, {false, :ditto},
@@ -45,17 +52,19 @@ defmodule AddressTest do
   test "address types" do
     for test <- tests() do
       test_input = elem(test, 0)
-      # test_input |> dbg
+      test_input |> dbg
       test_results = Tuple.delete_at(test, 0)
 
       # don't test is_expression/1 yet; it needs to be fixed.
       for num <- 0..3 do
         fun = Enum.at(ises(), num)
         {is?, val} = elem(test_results, num)
-        # {num, is?, val} |> dbg
+        {num, is?, val} |> dbg
         {is_result, val_result} = fun.(test_input)
 
-        # {num, is?, val, is_result, val_result, test_input} |> dbg
+        {num, is?, val, is_result, val_result, test_input} |> dbg
+
+        val_result == test_input |> dbg()
 
         assert is_result == is? and
                  (val_result == val or (val == :ditto and val_result == test_input))
