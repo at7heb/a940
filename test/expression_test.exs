@@ -37,8 +37,14 @@ defmodule ExpressionTest do
     assert expression == "+A1"
 
     token_list = tokens("100+A1")
-    Enum.at(token_list, 0) |> dbg
-    tokens("100+3*(5-2)") |> dbg
+    assert Enum.at(token_list, 0) == {:number, "100B"}
+    assert tokens("100+3*(5-2))") |> Enum.at(3) == {:asterisk, "*"}
+  end
+
+  test "expression eval" do
+    token_list = tokens("100)") |> dbg
+    state = Expression.new(token_list, %{}, {8, 1}) |> dbg
+    Expression.eval(state) |> dbg
   end
 
   def op(:add), do: {:operator, "+"}

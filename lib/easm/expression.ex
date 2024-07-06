@@ -9,13 +9,17 @@ defmodule Easm.Expression do
   """
 
   def new(tokens, symbols, star) do
+    tokens |> dbg
+
     new_tokens =
       Enum.map(tokens, fn {type, text} ->
         convert_token({type, text}, symbols)
       end)
 
+    new_tokens |> dbg
+
     %Expression{
-      operation_stack: [{:open_paren, "()"}],
+      operation_stack: [{:open_paren, "("}],
       value_stack: [],
       expect: [:symbol, :number, :open_paren, :unary],
       tokens: new_tokens,
@@ -25,7 +29,7 @@ defmodule Easm.Expression do
 
   def start_eval(tokens, {value, relocation} = star, symbols)
       when is_list(tokens) and is_integer(value) and is_integer(relocation) and is_map(symbols) do
-    state = new(tokens, symbols, star)
+    state = new(tokens ++ [{:close_paren, ")"}], symbols, star)
     eval(state)
   end
 
@@ -68,6 +72,36 @@ defmodule Easm.Expression do
         %Expression{} = state
       ) do
     state
+  end
+
+  def eval(
+        :value = _type,
+        %Expression{value_stack: value_stack, tokens: [first_token | rest_of_tokens]} = state
+      ) do
+    {first_token, rest_of_tokens} |> dbg
+    {:value, value} = first_token
+    # each value on the value_stack is a tuple: {value, relocation}
+    %{state | value_stack: [{value, 0} | value_stack], tokens: rest_of_tokens}
+  end
+
+  def eval(
+        :close_paren = _type,
+        %Expression{} = state
+      ) do
+    relative_priorities = compare_priorities(state)
+
+    cond do
+      relative_priorities == :first_lower ->
+        new_state = eval_top_operator(state)
+        eval(:close_paren, new_state)
+
+      # can be equal only if ( is at the top of the operator stack.
+      # pop it and the token and we're done
+      relative_priorities == :equal ->
+        [_ | new_operation_stack] = state.operation_stack
+        [_ | new_tokens] = state.tokens
+        %{state | operation_stack: new_operation_stack, tokens: new_tokens}
+    end
   end
 
   def eval_top_operator(%Expression{} = state) do
@@ -126,7 +160,12 @@ defmodule Easm.Expression do
 
   def convert_token({_type, _op} = token, _), do: token
 
-  def priority({:operator, op}) when is_binary(op) do
+  def priority({type, op}) when is_binary(op) do
+    cond do
+      type in [:operator, :open_paren, :close_paren] -> nil
+      true -> raise "illegal token on top of operator stack: {#{type}, #{op}}"
+    end
+
     case op do
       "U-" -> 30
       "U+" -> 30
@@ -134,9 +173,20 @@ defmodule Easm.Expression do
       "/" -> 20
       "+" -> 15
       "-" -> 15
+      # code depends on priority of ( equaling the priority of ).
+      # Make sure the next two lines reflect that rule.
       ")" -> 5
       "(" -> 5
     end
+  end
+
+  def compare_priorities(%Expression{tokens: [first_token | _rest_of_tokens]} = state) do
+    compare_priorities(first_token, state)
+  end
+
+  def compare_priorities(first, %Expression{operation_stack: [top | _rest]} = _state) do
+    {_, top_operator} = top
+    compare_priorities(first, top_operator)
   end
 
   def compare_priorities(first, second) do
