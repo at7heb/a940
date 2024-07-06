@@ -52,19 +52,19 @@ defmodule AddressTest do
   test "address types" do
     for test <- tests() do
       test_input = elem(test, 0)
-      test_input |> dbg
+      # test_input |> dbg
       test_results = Tuple.delete_at(test, 0)
 
       # don't test is_expression/1 yet; it needs to be fixed.
       for num <- 0..3 do
         fun = Enum.at(ises(), num)
         {is?, val} = elem(test_results, num)
-        {num, is?, val} |> dbg
+        # {num, is?, val} |> dbg
         {is_result, val_result} = fun.(test_input)
 
-        {num, is?, val, is_result, val_result, test_input} |> dbg
+        # {num, is?, val, is_result, val_result, test_input} |> dbg
 
-        val_result == test_input |> dbg()
+        # val_result == test_input |> dbg()
 
         assert is_result == is? and
                  (val_result == val or (val == :ditto and val_result == test_input))

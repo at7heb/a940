@@ -28,6 +28,17 @@ defmodule ExpressionTest do
     # result will be operator push
     # result will be value push
     # result will be eval
+    true
+  end
+
+  test "tokens from string" do
+    {token, expression} = octal_number_token("100+A1")
+    assert token == {:number, "100B"}
+    assert expression == "+A1"
+
+    token_list = tokens("100+A1")
+    Enum.at(token_list, 0) |> dbg
+    tokens("100+3*(5-2)") |> dbg
   end
 
   def op(:add), do: {:operator, "+"}
@@ -40,9 +51,65 @@ defmodule ExpressionTest do
   def token(:value, n),
     do: {:value, n}
 
-  def tokens(expression) when is_binary(string), do: tokens(expression, [])
+  def tokens(expression) when is_binary(expression),
+    do: tokens(String.replace(expression, " ", "") |> String.upcase(), [])
 
-  def tokens("", token_list), do: Enum.rev(token_list)
+  def tokens("", token_list), do: Enum.reverse(token_list)
 
-  def tokens()
+  def tokens(expression, token_list) do
+    {token, new_expression} =
+      cond do
+        String.starts_with?(expression, "A") ->
+          symbol_token(expression)
+
+        String.starts_with?(expression, "R") ->
+          symbol_token(expression)
+
+        String.starts_with?(expression, "U") ->
+          symbol_token(expression)
+
+        String.starts_with?(expression, "*") ->
+          {{:asterisk, "*"}, String.slice(expression, 1..-1//1)}
+
+        String.starts_with?(expression, "/") ->
+          {{:operator, "/"}, String.slice(expression, 1..-1//1)}
+
+        String.starts_with?(expression, "+") ->
+          {{:operator, "+"}, String.slice(expression, 1..-1//1)}
+
+        String.starts_with?(expression, "-") ->
+          {{:operator, "-"}, String.slice(expression, 1..-1//1)}
+
+        String.starts_with?(expression, "(") ->
+          {{:open_paren, "("}, String.slice(expression, 1..-1//1)}
+
+        String.starts_with?(expression, ")") ->
+          {{:close_paren, ")"}, String.slice(expression, 1..-1//1)}
+
+        String.starts_with?(expression, ["0", "1", "2", "3", "4", "5", "6", "7"]) ->
+          octal_number_token(expression)
+      end
+
+    tokens(new_expression, [token | token_list])
+  end
+
+  def symbol_token(expression) when is_binary(expression) do
+    token = {:symbol, String.slice(expression, 0, 2)}
+    new_expression = String.slice(expression, 2..-1//1)
+    {token, new_expression}
+  end
+
+  def octal_number_token(expression), do: octal_number_token(expression, 1)
+
+  def octal_number_token(expression, length) do
+    cond do
+      String.slice(expression, length, 1)
+      |> String.starts_with?(["0", "1", "2", "3", "4", "5", "6", "7"]) ->
+        octal_number_token(expression, length + 1)
+
+      true ->
+        {{:number, String.slice(expression, 0, length) <> "B"},
+         String.slice(expression, length..-1//1)}
+    end
+  end
 end
