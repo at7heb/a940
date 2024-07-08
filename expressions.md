@@ -63,6 +63,20 @@ When there are no more tokens, the operator stack should be empty and the value 
 
 When processing tokens, the token in hand should be of a category that is in the ```[expectations]``` list.
 
+### Relocation
+
+This is likely to be very limited.
+
+|Rel 1|Rel 2|Operation|Rel 3|Explanation|
+|------------|------------|---------|------------|-----------|
+|0|0|any|0|normal arithmetic|
+|0|1|+ -|1|constant + (base + value) = (constant + base) + value
+|0|1|*|value 1|$3 * MSG1-1 = 3(base + MSG1) - 1 = 3*base + 3 * MSG1 -1$|
+|0|3|+ -|3|constant + (base + value) = (constant + base) + value|
+|--|--|/|illegal|I think YAGNI|
+
+W.L.O.G. consider only cases where relocation 1 <= relocation 2.
+
 ## Testing
 
 Tests should be written for this stuff:

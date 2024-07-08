@@ -2,7 +2,7 @@ defmodule ExpressionTest do
   use ExUnit.Case
   doctest Easm.Expression
   # alias Easm.Lexer
-  # alias Easm.Symbol
+  alias Easm.Symbol
   # alias Easm.ADotOut
   alias Easm.Expression
 
@@ -42,9 +42,102 @@ defmodule ExpressionTest do
   end
 
   test "expression eval" do
-    token_list = tokens("100)") |> dbg
-    state = Expression.new(token_list, %{}, {8, 1}) |> dbg
-    Expression.eval(state) |> dbg
+    IO.puts("EX constant")
+    token_list = tokens("100)")
+    state = Expression.new(token_list, %{}, {8, 1})
+    Expression.eval(state)
+
+    # more complicated
+    IO.puts("EX a + b")
+    token_list = tokens("100+3)")
+    state = Expression.new(token_list, %{}, {8, 1})
+    Expression.eval(state)
+    {result_val, result_rel} = Expression.eval(state)
+    assert result_val == 67 and result_rel == 0
+
+    # more complicated
+    IO.puts("EX a + b - c - d")
+    token_list = tokens("100+3-5-2)")
+    state = Expression.new(token_list, %{}, {8, 1})
+    Expression.eval(state)
+    {result_val, result_rel} = Expression.eval(state)
+    assert result_val == 60 and result_rel == 0
+
+    # more complicated
+    IO.puts("EX use parentheses!")
+    token_list = tokens("100+3-(5-2))")
+    state = Expression.new(token_list, %{}, {8, 1})
+    Expression.eval(state)
+    {result_val, result_rel} = Expression.eval(state)
+    assert result_val == 64 and result_rel == 0
+
+    # divide
+    IO.puts("EX a / b")
+    token_list = tokens("100/2)")
+    state = Expression.new(token_list, %{}, {8, 1})
+    Expression.eval(state)
+    {result_val, result_rel} = Expression.eval(state)
+    assert result_val == 32 and result_rel == 0
+
+    IO.puts("EX a + b 100 + 3")
+    token_list = tokens("100+3)")
+    state = Expression.new(token_list, %{}, {8, 1})
+    Expression.eval(state)
+    {result_val, result_rel} = Expression.eval(state)
+    assert result_val == 67 and result_rel == 0
+
+    IO.puts("EX repeat a + b 100 + 3")
+    token_list = tokens("100+3)")
+    state = Expression.new(token_list, %{}, {8, 1})
+    Expression.eval(state)
+    {result_val, result_rel} = Expression.eval(state)
+    assert result_val == 67 and result_rel == 0
+
+    # multiply
+    IO.puts("EX 100 * 3")
+    token_list = tokens("100*3)")
+    state = Expression.new(token_list, %{}, {8, 1})
+    val1 = Expression.eval(state)
+    val2 = Expression.eval(state)
+    {result_val, result_rel} = val2
+    assert val1 == val2
+    assert result_val == 192 and result_rel == 0
+  end
+
+  test "expressions like * + 1" do
+    IO.puts("EY *+1")
+    token_list = tokens("*+1)")
+    state = Expression.new(token_list, %{}, {8, 1})
+    val2 = Expression.eval(state)
+    {result_val, result_rel} = val2
+    assert result_val == 9 and result_rel == 1
+
+    IO.puts("EY *-*")
+    token_list = tokens("*-*)")
+    state = Expression.new(token_list, %{}, {8, 1})
+    val2 = Expression.eval(state)
+    {result_val, result_rel} = val2
+    assert result_val == 0 and result_rel == 0
+  end
+
+  test "operator evaluation" do
+    value_stack = [{10, 0}, {5, 0}]
+    new_stack = Expression.eval_negate(value_stack)
+    assert length(new_stack) == 2
+    assert {-10, 0} == hd(new_stack)
+
+    new_stack = Expression.eval_binary(&Kernel.*/2, value_stack)
+    assert length(new_stack) == 1
+    assert {50, 0} == hd(new_stack)
+    new_stack = Expression.eval_binary(&Kernel.div/2, value_stack)
+    assert length(new_stack) == 1
+    assert {0, 0} == hd(new_stack)
+    new_stack = Expression.eval_binary(&Kernel.+/2, value_stack)
+    assert length(new_stack) == 1
+    assert {15, 0} == hd(new_stack)
+    new_stack = Expression.eval_binary(&Kernel.-/2, value_stack)
+    assert length(new_stack) == 1
+    assert {-5, 0} == hd(new_stack)
   end
 
   def op(:add), do: {:operator, "+"}
@@ -105,7 +198,7 @@ defmodule ExpressionTest do
     {token, new_expression}
   end
 
-  def octal_number_token(expression), do: octal_number_token(expression, 1)
+  def octal_number_token(expression), do: octal_number_token(expression, 0)
 
   def octal_number_token(expression, length) do
     cond do
@@ -117,5 +210,9 @@ defmodule ExpressionTest do
         {{:number, String.slice(expression, 0, length) <> "B"},
          String.slice(expression, length..-1//1)}
     end
+  end
+
+  def make_symbol_table() do
+    symbol_table = Enum.reduce(0..9, %{}, fn num, symbols -> Map.put(symbols, "A" <> Integer.to_string(num), Symbol.))
   end
 end

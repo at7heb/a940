@@ -28,6 +28,12 @@ defmodule Easm.Symbol do
 
   def symbol(%ADotOut{} = _aout), do: symbol()
 
+  def symbol_absolute(value),
+    do: %Easm.Symbol{state: :known, value: value, relocatable: false, relocation: 0}
+
+  def symbol_relative(value),
+    do: %Easm.Symbol{state: :known, value: value, relocatable: true, relocation: 1}
+
   def symbol_here(%ADotOut{} = aout) do
     {location, relocatable?} = Easm.Memory.get_location(aout)
     %Symbol{value: location, state: :known, relocatable: relocatable?}
