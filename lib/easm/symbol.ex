@@ -34,6 +34,9 @@ defmodule Easm.Symbol do
   def symbol_relative(value),
     do: %Easm.Symbol{state: :known, value: value, relocatable: true, relocation: 1}
 
+  def symbol_external(),
+    do: %Easm.Symbol{state: :external, value: 0o37777, relocation: 0, relocatable: false}
+
   def symbol_here(%ADotOut{} = aout) do
     {location, relocatable?} = Easm.Memory.get_location(aout)
     %Symbol{value: location, state: :known, relocatable: relocatable?}

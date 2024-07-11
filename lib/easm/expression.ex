@@ -24,7 +24,8 @@ defmodule Easm.Expression do
       value_stack: [],
       expect: [:symbol, :number, :open_paren, :unary, :askterisk],
       tokens: new_tokens,
-      star: star
+      star: star,
+      symbols: symbols
     }
   end
 
@@ -112,20 +113,31 @@ defmodule Easm.Expression do
 
   def eval(
         :symbol = _type,
-        %Expression{symbols: symbols, tokens: [{_, symbol_name} | _rest_of_tokens]} = _state
+        %Expression{
+          symbols: symbols,
+          tokens: [{_, symbol_name} | rest_of_tokens]
+        } = state
       ) do
     symbol_value = Map.get(symbols, symbol_name)
 
-    cond do
-      symbol_value == nil ->
-        raise "undefined symbol #{symbol_name}"
+    new_token =
+      cond do
+        symbol_value == nil ->
+          raise "undefined symbol #{symbol_name}"
 
-      symbol_value.state == :known ->
-        {symbol_value.value, symbol_value.relocation}
+        symbol_value.state == :known ->
+          {:value, {symbol_value.value, symbol_value.relocation}}
 
-      true ->
-        raise "symbol unknown here"
-    end
+        true ->
+          raise "symbol unknown here"
+      end
+
+    new_state = %{
+      state
+      | tokens: [new_token | rest_of_tokens]
+    }
+
+    eval(:value, new_state)
   end
 
   def eval(
@@ -255,14 +267,14 @@ defmodule Easm.Expression do
     end
   end
 
-  def convert_token({:symbol, symbol_name}, symbols) do
-    symbol = Map.get(symbols, symbol_name, nil)
+  # def convert_token({:symbol, symbol_name}, symbols) do
+  #   symbol = Map.get(symbols, symbol_name, nil)
 
-    cond do
-      symbol == nil -> {:undefined, symbol_name}
-      true -> {:symbol_value, {symbol.value, symbol.relocation}}
-    end
-  end
+  #   cond do
+  #     symbol == nil -> {:undefined, symbol_name}
+  #     true -> {:symbol_value, {symbol.value, symbol.relocation}}
+  #   end
+  # end
 
   def convert_token({:number, number_text}, _), do: {:value, Easm.Lexer.number_value(number_text)}
 

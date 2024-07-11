@@ -42,13 +42,11 @@ defmodule ExpressionTest do
   end
 
   test "expression eval" do
-    IO.puts("EX constant")
     token_list = tokens("100)")
     state = Expression.new(token_list, %{}, {8, 1})
     Expression.eval(state)
 
     # more complicated
-    IO.puts("EX a + b")
     token_list = tokens("100+3)")
     state = Expression.new(token_list, %{}, {8, 1})
     Expression.eval(state)
@@ -56,7 +54,6 @@ defmodule ExpressionTest do
     assert result_val == 67 and result_rel == 0
 
     # more complicated
-    IO.puts("EX a + b - c - d")
     token_list = tokens("100+3-5-2)")
     state = Expression.new(token_list, %{}, {8, 1})
     Expression.eval(state)
@@ -64,7 +61,6 @@ defmodule ExpressionTest do
     assert result_val == 60 and result_rel == 0
 
     # more complicated
-    IO.puts("EX use parentheses!")
     token_list = tokens("100+3-(5-2))")
     state = Expression.new(token_list, %{}, {8, 1})
     Expression.eval(state)
@@ -72,21 +68,18 @@ defmodule ExpressionTest do
     assert result_val == 64 and result_rel == 0
 
     # divide
-    IO.puts("EX a / b")
     token_list = tokens("100/2)")
     state = Expression.new(token_list, %{}, {8, 1})
     Expression.eval(state)
     {result_val, result_rel} = Expression.eval(state)
     assert result_val == 32 and result_rel == 0
 
-    IO.puts("EX a + b 100 + 3")
     token_list = tokens("100+3)")
     state = Expression.new(token_list, %{}, {8, 1})
     Expression.eval(state)
     {result_val, result_rel} = Expression.eval(state)
     assert result_val == 67 and result_rel == 0
 
-    IO.puts("EX repeat a + b 100 + 3")
     token_list = tokens("100+3)")
     state = Expression.new(token_list, %{}, {8, 1})
     Expression.eval(state)
@@ -94,7 +87,6 @@ defmodule ExpressionTest do
     assert result_val == 67 and result_rel == 0
 
     # multiply
-    IO.puts("EX 100 * 3")
     token_list = tokens("100*3)")
     state = Expression.new(token_list, %{}, {8, 1})
     val1 = Expression.eval(state)
@@ -105,14 +97,12 @@ defmodule ExpressionTest do
   end
 
   test "expressions like * + 1" do
-    IO.puts("EY *+1")
     token_list = tokens("*+1)")
     state = Expression.new(token_list, %{}, {8, 1})
     val2 = Expression.eval(state)
     {result_val, result_rel} = val2
     assert result_val == 9 and result_rel == 1
 
-    IO.puts("EY *-*")
     token_list = tokens("*-*)")
     state = Expression.new(token_list, %{}, {8, 1})
     val2 = Expression.eval(state)
@@ -139,6 +129,44 @@ defmodule ExpressionTest do
     assert length(new_stack) == 1
     assert {-5, 0} == hd(new_stack)
   end
+
+  test "expression with absolute symbol" do
+    symbol_table = make_symbol_table()
+    token_list = tokens("A2)")
+    state = Expression.new(token_list, symbol_table, {8, 1})
+    val2 = Expression.eval(state)
+    {result_val, result_rel} = val2
+    assert result_val == 19
+    assert result_rel == 0
+    token_list = tokens("R8-7)")
+    state = Expression.new(token_list, symbol_table, {8, 1})
+    val2 = Expression.eval(state)
+    {result_val, result_rel} = val2
+    assert result_val == 8 * 8 + 4 - 7
+    assert result_rel == 1
+    token_list = tokens("R7-R5)")
+    state = Expression.new(token_list, symbol_table, {8, 1})
+    val2 = Expression.eval(state)
+    {result_val, result_rel} = val2
+    assert result_val == 16
+    assert result_rel == 0
+    token_list = tokens("R7-*)")
+    state = Expression.new(token_list, symbol_table, {8, 1})
+    val2 = Expression.eval(state)
+    {result_val, result_rel} = val2
+    assert result_val == 52
+    assert result_rel == 0
+  end
+
+  # test "undefined symbols" do
+  #   symbol_table = make_symbol_table()
+  #   token_list = tokens("U2)") |> dbg()
+  #   state = Expression.new(token_list, symbol_table, {8, 1})
+  #   val2 = Expression.eval(state) |> dbg
+  #   {result_val, result_rel} = val2
+  #   assert result_val == 19
+  #   assert result_rel == 0
+  # end
 
   def op(:add), do: {:operator, "+"}
   def op(:subtract), do: {:operator, "-"}
@@ -213,6 +241,13 @@ defmodule ExpressionTest do
   end
 
   def make_symbol_table() do
-    symbol_table = Enum.reduce(0..9, %{}, fn num, symbols -> Map.put(symbols, "A" <> Integer.to_string(num), Symbol.))
+    Enum.reduce(0..9, %{}, fn num, symbols ->
+      Map.put(symbols, "A" <> Integer.to_string(num), Symbol.symbol_absolute(0o10 * num + 3))
+      |> Map.put(
+        "R" <> Integer.to_string(num),
+        Symbol.symbol_relative(0o10 * num + 4)
+      )
+      |> Map.put("U" <> Integer.to_string(num), Symbol.symbol_external())
+    end)
   end
 end
