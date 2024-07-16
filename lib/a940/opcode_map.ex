@@ -6,7 +6,7 @@ defmodule A940.OpcodeMap do
   def opcode_map() do
     %{
       "DATA" => {nil, :number_data},
-      "STRING" => {nil, :string_data},
+      "ASC" => {nil, :string_data},
       "STA" => {0o35_00000, :mem_addr},
       "STB" => {0o36_00000, :mem_addr},
       "STX" => {0o37_00000, :mem_addr},

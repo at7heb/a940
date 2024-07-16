@@ -1,24 +1,198 @@
 defmodule Easm.Ops do
+  alias Easm.ADotOut
+  alias Easm.LexicalLine
+  alias Easm.Memory
+  alias Easm.Symbol
+  alias Easm.Assembly
+  alias Easm.Pseudos
+  alias Easm.Address
+
+  import Bitwise
+
+  def handle_operator_part(%ADotOut{file_ok: false} = aout) do
+    aout
+  end
+
+  # cases
+  # operator
+  # operator asterisk
+  def handle_operator_part(%ADotOut{lines: lines} = aout) do
+    cond do
+      Assembly.has_flag?(aout, :done) ->
+        aout
+
+      true ->
+        current_line = Map.get(lines, :current_line)
+
+        handle_operator_part(
+          aout,
+          Map.get(lines, current_line)
+        )
+    end
+  end
+
+  def handle_operator_part(
+        %ADotOut{} = aout,
+        %LexicalLine{operation_tokens: op_tokens} = lex_line
+      ) do
+    cond do
+      Assembly.has_flag?(aout, :done) or op_tokens == [] ->
+        aout
+
+      true ->
+        handle_operator_part_ext(aout, lex_line)
+    end
+  end
+
+  def handle_operator_part_ext(
+        %ADotOut{} = aout,
+        %LexicalLine{operation_tokens: op_tokens} = lex_line
+      ) do
+    {op0, op1} = {hd(op_tokens), Enum.at(op_tokens, 1)}
+
+    {:symbol, op} = op0
+    info_pseudo = Pseudos.pseudo_op_lookup(op)
+    is_op = op_lookup(op)
+    is_indirect = op_indirect(op1)
+
+    {new_aout, okay?} =
+      cond do
+        info_pseudo != :not_pseudo and is_indirect == false ->
+          {Pseudos.handle_pseudo(aout, lex_line, info_pseudo), true}
+
+        is_op != :not_op ->
+          {_, operator, address_type} = is_op
+          {handle_op(aout, lex_line, operator, address_type, is_indirect), true}
+
+        true ->
+          {aout, false}
+      end
+
+    # {tokens, is_pseudo, is_op}
+    Assembly.finish_part(new_aout, okay?)
+  end
+
+  @indirect 0o40000
+  @index 0o20000000
+
   def misc_ops() do
     %{indirect: 0o40000, index: 0o20000000}
   end
 
-  def pseudo_op_map() do
-    %{
-      "IDENT" => :ident,
-      "END" => :end,
-      "EQU" => :equ,
-      "DATA" => :data,
-      "BSS" => :bss,
-      "ASC" => :asc,
-      "OPD" => :opd,
-      "BES" => :bes,
-      "IF" => :if,
-      "ELSE" => :else,
-      "ENDIF" => :endif,
-      "LIST" => :list,
-      "NOLIST" => :nolist
-    }
+  def index_bit(indexed?) when is_boolean(indexed?) do
+    case indexed? do
+      true -> @index
+      false -> 0
+    end
+  end
+
+  def index_bit(index_info) when is_atom(index_info) do
+    case index_info do
+      :indexed_yes -> @index
+      :indexed_no -> 0
+    end
+  end
+
+  def op_lookup(op) when is_binary(op) do
+    op_info = Map.get(opcode_map(), op)
+
+    cond do
+      op_info == nil ->
+        :not_op
+
+      true ->
+        {op_value, address_type} = op_info
+        {:ok, op_value, address_type}
+    end
+  end
+
+  # handle_op(aout, lex_line, operator, address_type, is_indirect)
+
+  def handle_op(%ADotOut{} = aout, %LexicalLine{} = _ll, op_value, :no_addr, _indirect?) do
+    # handle the op_value; put it in the memory.
+    {current_location, relocatable?} = Memory.get_location(aout)
+
+    memory_entry =
+      Memory.memory(
+        0,
+        current_location,
+        relocatable?,
+        op_value,
+        %Symbol{},
+        :no_addr
+      )
+
+    %{aout | memory: [memory_entry | aout.memory]}
+    |> ADotOut.update_label_in_symbol_table()
+    |> ADotOut.increment_current_location()
+
+    # can add symbol, indirect, or indexed to hd(aout.memory).
+  end
+
+  def handle_op(
+        %ADotOut{} = aout,
+        %LexicalLine{} = _ll,
+        op_value,
+        :mem_addr,
+        indirect?
+      ) do
+    # handle the op_value; put it in the memory.
+    {current_location, relocatable?} = Memory.get_location(aout)
+
+    {index_info, type, address_definition} = Address.get_address(aout)
+    {index_info, type, address_definition} |> dbg
+
+    {new_op_value, relocation, symbol_name, symbol} =
+      cond do
+        type == :value ->
+          {address_value, address_relocation} = address_definition
+
+          {op_value ||| (address_value &&& 0o37777) ||| index_bit(index_info) |||
+             indirect_bit(indirect?), address_relocation, "", nil}
+
+        # ||| index_bit(indexed?)
+        type == :expression ->
+          name = Symbol.generate_name(:expression)
+
+          {op_value ||| index_bit(index_info) ||| indirect_bit(indirect?), 0, name,
+           address_definition}
+
+        type == :no_address ->
+          {op_value, 0, "", nil}
+
+        true ->
+          {op_value, 0, "", nil}
+      end
+
+    memory_entry =
+      Memory.memory(
+        relocation,
+        current_location,
+        relocatable?,
+        new_op_value,
+        symbol_name,
+        :mem_addr
+      )
+
+    %{aout | memory: [memory_entry | aout.memory]}
+    |> ADotOut.update_label_in_symbol_table()
+    |> ADotOut.increment_current_location()
+    |> ADotOut.handle_address_symbol(symbol_name, symbol)
+
+    # can add symbol, indirect, or indexed to hd(aout.memory).
+  end
+
+  def op_indirect(nil), do: false
+
+  def op_indirect({:asterisk, _asterisk}), do: true
+
+  def op_indirect({_, _}), do: false
+
+  def indirect_bit(indirect?) when is_boolean(indirect?) do
+    cond do
+      indirect? -> @indirect
+      true -> 0
+    end
   end
 
   def opcode_map() do
@@ -42,28 +216,28 @@ defmodule Easm.Ops do
       "ETR" => {0o14_00000, :mem_addr},
       "MRG" => {0o16_00000, :mem_addr},
       "EOR" => {0o17_00000, :mem_addr},
-      "RCH" => {0o46_00000, :reg_op_addr},
-      "CLA" => {0o46_00001, :reg_op},
-      "CLB" => {0o46_00002, :reg_op},
-      "CLAB" => {0o46_00003, :reg_op},
-      "CAB" => {0o46_00004, :reg_op},
-      "CBA" => {0o46_00010, :reg_op},
-      "XAB" => {0o46_00014, :reg_op},
-      "CBX" => {0o46_00020, :reg_op},
-      "CXB" => {0o46_00040, :reg_op},
-      "XXB" => {0o46_00060, :reg_op},
-      "STE" => {0o46_00122, :reg_op},
-      "LDE" => {0o46_00140, :reg_op},
-      "XEE" => {0o46_00160, :reg_op},
-      "CXA" => {0o46_00200, :reg_op},
-      "CAX" => {0o46_00400, :reg_op},
-      "XXA" => {0o46_00600, :reg_op},
-      "CNA" => {0o46_01000, :reg_op},
-      "BAC" => {0o46_00012, :reg_op},
-      "ABC" => {0o46_00005, :reg_op},
-      "CLR" => {0o2_46_00003, :reg_op},
-      "CLX" => {0o2_46_00000, :reg_op},
-      "AXC" => {0o46_00401, :reg_op},
+      "RCH" => {0o46_00000, :rch_addr},
+      "CLA" => {0o46_00001, :no_addr},
+      "CLB" => {0o46_00002, :no_addr},
+      "CLAB" => {0o46_00003, :no_addr},
+      "CAB" => {0o46_00004, :no_addr},
+      "CBA" => {0o46_00010, :no_addr},
+      "XAB" => {0o46_00014, :no_addr},
+      "CBX" => {0o46_00020, :no_addr},
+      "CXB" => {0o46_00040, :no_addr},
+      "XXB" => {0o46_00060, :no_addr},
+      "STE" => {0o46_00122, :no_addr},
+      "LDE" => {0o46_00140, :no_addr},
+      "XEE" => {0o46_00160, :no_addr},
+      "CXA" => {0o46_00200, :no_addr},
+      "CAX" => {0o46_00400, :no_addr},
+      "XXA" => {0o46_00600, :no_addr},
+      "CNA" => {0o46_01000, :no_addr},
+      "BAC" => {0o46_00012, :no_addr},
+      "ABC" => {0o46_00005, :no_addr},
+      "CLR" => {0o2_46_00003, :no_addr},
+      "CLX" => {0o2_46_00000, :no_addr},
+      "AXC" => {0o46_00401, :no_addr},
       "BRU" => {0o01_00000, :mem_addr},
       "BRX" => {0o41_00000, :mem_addr},
       "BRM" => {0o43_00000, :mem_addr},
@@ -76,15 +250,15 @@ defmodule Easm.Ops do
       "SKA" => {0o72_00000, :mem_addr},
       "SKG" => {0o73_00000, :mem_addr},
       "SKD" => {0o74_00000, :mem_addr},
-      "LRSH" => {0o66_24000, :shift_op},
-      "RSH" => {0o66_00000, :shift_op},
-      "RCY" => {0o66_20000, :shift_op},
-      "LSH" => {0o67_00000, :shift_op},
-      "LCY" => {0o67_20000, :shift_op},
-      "NOD" => {0o67_10000, :shift_op},
-      "NODCY" => {0o67_30000, :shift_op},
+      "LRSH" => {0o66_24000, :shift_addr},
+      "RSH" => {0o66_00000, :shift_addr},
+      "RCY" => {0o66_20000, :shift_addr},
+      "LSH" => {0o67_00000, :shift_addr},
+      "LCY" => {0o67_20000, :shift_addr},
+      "NOD" => {0o67_10000, :shift_addr},
+      "NODCY" => {0o67_30000, :shift_addr},
       "HLT" => {0o00_00000, :no_addr},
-      "NOP" => {0o20_00000, :no_addr},
+      "NOP" => {0o20_00000, :mem_addr},
       "EXU" => {0o23_00000, :mem_addr},
       "ROV" => {0o02_20001, :no_addr},
       "REO" => {0o02_20010, :no_addr},
@@ -261,5 +435,9 @@ defmodule Easm.Ops do
       "SYSPOP76" => {0o57600000, :mem_addr},
       "SYSPOP77" => {0o57700000, :mem_addr}
     }
+  end
+
+  def clean_for_new_statement(%ADotOut{} = aout) do
+    aout
   end
 end

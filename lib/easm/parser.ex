@@ -25,7 +25,7 @@ defmodule Easm.Parser do
 
   def build_symbol_table(
         tokens,
-        %ADotOut{state: :beginning_of_line} = aout
+        %ADotOut{} = aout
       )
       when is_list(tokens) do
     [h | t] = tokens
@@ -76,7 +76,7 @@ defmodule Easm.Parser do
   end
 
   def add_exported_symbol(aout, symbol) do
-    symbol_value = %{Symbol.symbol(aout) | type: :exported}
+    symbol_value = %{Symbol.symbol(aout) | exported: true}
     update_symbol_table(aout, symbol, symbol_value)
   end
 
@@ -90,7 +90,7 @@ defmodule Easm.Parser do
           symbol_value
 
         existing_symbol.known == false ->
-          %{Symbol.symbol() | known: {:error, :multiply_defined}}
+          %{Symbol.symbol() | state: {:error, :multiply_defined}}
       end
 
     new_symbols = Map.put(symbols, symbol, new_symbol_value)
