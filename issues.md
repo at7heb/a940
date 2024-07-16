@@ -10,3 +10,9 @@
 |6|1|write output code|open|
 |7|3|write symbol resolution tests|open|
 |8|2|write literal tests|open|
+
+## Notes
+
+### Issues 1 and 7
+
+Created new branch: resolve_pass
