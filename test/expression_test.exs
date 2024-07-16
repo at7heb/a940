@@ -158,6 +158,23 @@ defmodule ExpressionTest do
     assert result_rel == 0
   end
 
+  test "expressions from address" do
+    current_location = {17, 1}
+    symbols = make_symbol_table()
+
+    tokens = tokens("252525*3+1")
+
+    {value, relocation} =
+      Expression.start_eval(
+        tokens,
+        current_location,
+        symbols
+      )
+
+    assert value == 262_144
+    assert relocation == 0
+  end
+
   # test "undefined symbols" do
   #   symbol_table = make_symbol_table()
   #   token_list = tokens("U2)") |> dbg()

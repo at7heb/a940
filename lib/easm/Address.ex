@@ -7,6 +7,7 @@ defmodule Easm.Address do
   alias Easm.Ops
   alias Easm.Symbol
   alias Easm.Address
+  alias Easm.Expression
   import Bitwise
 
   defstruct type: 0,
@@ -55,7 +56,7 @@ defmodule Easm.Address do
 
   def get_address(%ADotOut{} = _aout, current_line, %LexicalLine{address_tokens: []} = _lex_line)
       when is_integer(current_line),
-      do: new(:no_address)
+      do: {:indexed_no, :no_address, nil}
 
   def get_address(
         %ADotOut{} = aout,
@@ -64,26 +65,38 @@ defmodule Easm.Address do
       )
       when is_integer(current_line) do
     {is_indexed?, non_indexed_addr_tokens} = is_indexed(addr_tokens)
-    {is_constant?, constant_value} = is_constant(non_indexed_addr_tokens)
-    {is_literal?, literal_tokens} = is_literal(non_indexed_addr_tokens)
-    {is_symbol?, symbol_token} = is_symbol(non_indexed_addr_tokens)
-    {is_expression?, expression_tokens} = is_expression(non_indexed_addr_tokens)
+    # {is_constant?, constant_value} = is_constant(non_indexed_addr_tokens)
+    # {is_literal?, literal_tokens} = is_literal(non_indexed_addr_tokens)
+    # {is_symbol?, symbol_token} = is_symbol(non_indexed_addr_tokens)
+    # {is_expression?, expression_tokens} = is_expression(non_indexed_addr_tokens)
+    relevant_tokens =
+      cond do
+        is_indexed? -> non_indexed_addr_tokens
+        true -> addr_tokens
+      end
+      |> dbg
 
-    cond do
-      is_constant? ->
-        %{constant_value | indexed?: is_indexed?}
+    indexing_atom =
+      case is_indexed?,
+        do: (
+          true -> :indexed_yes
+          false -> :indexed_no
+        )
 
-      is_literal? ->
-        literal_address(aout, current_line, literal_tokens, is_indexed?)
+    try do
+      {value, relocation} =
+        Expression.start_eval(
+          relevant_tokens,
+          ADotOut.get_current_location(aout),
+          aout.symbols
+        )
 
-      is_symbol? ->
-        symbol_address(aout, symbol_token, is_indexed?)
-
-      is_expression? ->
-        address_expression(aout, current_line, expression_tokens, is_indexed?)
+      {indexing_atom, :value, {value, relocation}}
+    catch
+      :undefined_expr ->
+        symbol = Symbol.new(nil, relevant_tokens, :unknown)
+        {indexing_atom, :expression, symbol}
     end
-
-    # |> dbg
   end
 
   def literal_address(%ADotOut{} = _aout, current_line, tokens, is_indexed?)

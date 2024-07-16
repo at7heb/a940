@@ -58,11 +58,14 @@ defmodule Easm.Expression do
         :operator = _type,
         %Expression{} = state
       ) do
+    state = convert_to_unary(state)
     hd_token = hd(state.tokens)
     e = token_meets_expectation(hd_token, state.expect)
 
     cond do
       !e ->
+        {hd_token, state.expect} |> dbg
+
         raise "operator {#{elem(hd_token, 0)},#{elem(hd_token, 1)}} does not meet expections [#{state.expect}]"
 
       true ->
@@ -123,12 +126,13 @@ defmodule Easm.Expression do
     new_token =
       cond do
         symbol_value == nil ->
-          raise "undefined symbol #{symbol_name}"
+          throw(:undefined_expr)
 
         symbol_value.state == :known ->
           {:value, {symbol_value.value, symbol_value.relocation}}
 
         true ->
+          symbol_value |> dbg
           raise "symbol unknown here"
       end
 
@@ -280,6 +284,21 @@ defmodule Easm.Expression do
 
   def convert_token({_type, _op} = token, _), do: token
 
+  def convert_to_unary(%Expression{tokens: [head_token | rest_of_tokens] = tokens} = state) do
+    unary_ok = :unary in state.expect
+    maybe_unary_plus = head_token == {:operator, "+"}
+    maybe_unary_minus = head_token == {:operator, "-"}
+
+    new_tokens =
+      cond do
+        not unary_ok -> tokens
+        unary_ok and maybe_unary_plus -> [{:operator, "U+"} | rest_of_tokens]
+        unary_ok and maybe_unary_minus -> [{:operator, "U-"} | rest_of_tokens]
+      end
+
+    %{state | tokens: new_tokens}
+  end
+
   def priority({type, op}) when is_binary(op) do
     cond do
       type in [:operator, :open_paren, :close_paren] -> nil
@@ -319,8 +338,16 @@ defmodule Easm.Expression do
     end
   end
 
-  def token_meets_expectation({type, _text} = _token, expectations) when is_list(expectations),
-    do: type in expectations
+  def token_meets_expectation({type, text} = _token, expectations) when is_list(expectations) do
+    e = type in expectations
+
+    cond do
+      e -> e
+      type == :operator and text == "U-" and :unary in expectations -> true
+      type == :operator and text == "U+" and :unary in expectations -> true
+      true -> false
+    end
+  end
 
   def validate_end_of_expression(%Expression{} = state) do
     cond do

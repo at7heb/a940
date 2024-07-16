@@ -24,7 +24,6 @@ defmodule Easm.Assembly do
         |> clean_for_new_statement()
 
         recognize_comment(aout)
-        # |> parse_out_parts()
         |> handle_label_part()
         |> Ops.handle_operator_part()
         # |> resolve_addresses()
@@ -139,7 +138,7 @@ defmodule Easm.Assembly do
       true ->
         mem = hd(aout.memory)
         location = mem.location
-        relocatable? = mem.relocatable?
+        relocatable? = mem.instruction_relocatable?
         content = mem.content
 
         location_tag =

@@ -3,8 +3,9 @@ defmodule Easm.Memory do
   alias Easm.ADotOut
   # alias Easm.Symbol
 
-  defstruct relocatable?: false,
+  defstruct address_relocation: 0,
             location: 0,
+            instruction_relocatable?: true,
             content: 999_999_999,
             # address_field_type is one of :no_addr, :shift_addr, :rch_addr, or :mem_addr
             address_field_type: :no_addr,
@@ -12,16 +13,19 @@ defmodule Easm.Memory do
             end_action: {}
 
   def memory(
-        relocatable?,
+        address_relocation,
         location,
+        instruction_relocatable?,
         content,
         symbol_name,
         address_type,
         end_action \\ nil
-      ) do
+      )
+      when is_integer(address_relocation) and is_boolean(instruction_relocatable?) do
     %Easm.Memory{
-      relocatable?: relocatable?,
+      address_relocation: address_relocation,
       location: location,
+      instruction_relocatable?: instruction_relocatable?,
       content: content,
       address_field_type: address_type,
       symbol_name: symbol_name,

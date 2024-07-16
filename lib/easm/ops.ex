@@ -86,6 +86,13 @@ defmodule Easm.Ops do
     end
   end
 
+  def index_bit(index_info) when is_atom(index_info) do
+    case index_info do
+      :indexed_yes -> @index
+      :indexed_no -> 0
+    end
+  end
+
   def op_lookup(op) when is_binary(op) do
     op_info = Map.get(opcode_map(), op)
 
@@ -107,8 +114,9 @@ defmodule Easm.Ops do
 
     memory_entry =
       Memory.memory(
-        relocatable?,
+        0,
         current_location,
+        relocatable?,
         op_value,
         %Symbol{},
         :no_addr
@@ -131,33 +139,45 @@ defmodule Easm.Ops do
     # handle the op_value; put it in the memory.
     {current_location, relocatable?} = Memory.get_location(aout)
 
-    address = Address.get_address(aout)
-    address |> dbg
+    {index_info, type, address_definition} = Address.get_address(aout)
+    {index_info, type, address_definition} |> dbg
 
-    new_op_value =
+    {new_op_value, relocation, symbol_name, symbol} =
       cond do
-        address.type == :constant ->
-          op_value ||| (address.constant &&& 0o37777) ||| index_bit(address.indexed?) |||
-            indirect_bit(indirect?)
+        type == :value ->
+          {address_value, address_relocation} = address_definition
+
+          {op_value ||| (address_value &&& 0o37777) ||| index_bit(index_info) |||
+             indirect_bit(indirect?), address_relocation, "", nil}
 
         # ||| index_bit(indexed?)
+        type == :expression ->
+          name = Symbol.generate_name(:expression)
+
+          {op_value ||| index_bit(index_info) ||| indirect_bit(indirect?), 0, name,
+           address_definition}
+
+        type == :no_address ->
+          {op_value, 0, "", nil}
+
         true ->
-          op_value
+          {op_value, 0, "", nil}
       end
 
     memory_entry =
       Memory.memory(
-        relocatable?,
+        relocation,
         current_location,
+        relocatable?,
         new_op_value,
-        address.symbol_name,
+        symbol_name,
         :mem_addr
       )
 
     %{aout | memory: [memory_entry | aout.memory]}
     |> ADotOut.update_label_in_symbol_table()
     |> ADotOut.increment_current_location()
-    |> ADotOut.handle_address_symbol(address.symbol_name, address.symbol)
+    |> ADotOut.handle_address_symbol(symbol_name, symbol)
 
     # can add symbol, indirect, or indexed to hd(aout.memory).
   end

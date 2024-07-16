@@ -37,6 +37,14 @@ defmodule Easm.ADotOut do
     end
   end
 
+  def get_current_location(%ADotOut{} = aout) do
+    case aout.relocation_reference do
+      :absolute -> {aout.absolute_location, 0}
+      :relocatable -> {aout.relocatable_location, 1}
+      _ -> {0, 0}
+    end
+  end
+
   def handle_address_symbol(%ADotOut{} = aout, "", _), do: aout
 
   def handle_address_symbol(%ADotOut{symbols: symbols} = aout, symbol_name, %Symbol{} = symbol) do
@@ -70,14 +78,22 @@ defmodule Easm.ADotOut do
   def update_label_in_symbol_table(%ADotOut{symbols: symbols, label: symbol_name} = aout) do
     {symbols, symbol_name} |> dbg
 
-    {location, relocatable} =
+    {location, relocatable, relocation} =
       cond do
-        aout.relocation_reference == :relocatable -> {aout.relocatable_location, true}
-        true -> {aout.absolute_location, false}
+        aout.relocation_reference == :relocatable -> {aout.relocatable_location, true, 1}
+        true -> {aout.absolute_location, false, 0}
       end
 
     symbol = Map.get(symbols, symbol_name)
-    new_symbol = %{symbol | value: location, relocatable: relocatable}
+
+    new_symbol = %{
+      symbol
+      | value: location,
+        relocatable: relocatable,
+        relocation: relocation,
+        state: :known
+    }
+
     new_symbols = Map.put(aout.symbols, symbol_name, new_symbol)
     new_symbols |> dbg
     %{aout | symbols: new_symbols}
