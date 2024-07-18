@@ -10,3 +10,5 @@
 |6|1|write output code|open|
 |7|3|write symbol resolution tests|open|
 |8|2|write literal tests|open|
+|9|1|write module documentation|open|
+|10|1|write function documentation|open|
