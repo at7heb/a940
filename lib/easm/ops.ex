@@ -140,7 +140,7 @@ defmodule Easm.Ops do
     {current_location, relocatable?} = Memory.get_location(aout)
 
     {index_info, type, address_definition} = Address.get_address(aout)
-    {index_info, type, address_definition} |> dbg
+    # {index_info, type, address_definition} |> dbg
 
     {new_op_value, relocation, symbol_name, symbol} =
       cond do

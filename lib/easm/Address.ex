@@ -74,7 +74,6 @@ defmodule Easm.Address do
         is_indexed? -> non_indexed_addr_tokens
         true -> addr_tokens
       end
-      |> dbg
 
     indexing_atom =
       case is_indexed?,
@@ -106,9 +105,9 @@ defmodule Easm.Address do
   end
 
   def symbol_address(%ADotOut{} = aout, symbol_token, is_indexed?) do
-    {symbol_token, is_indexed?, "symbol_address"} |> dbg()
+    {symbol_token, is_indexed?, "symbol_address"}
     symbol_table_entry = Map.get(aout.symbols, symbol_token)
-    {symbol_token, symbol_table_entry} |> dbg
+    {symbol_token, symbol_table_entry}
 
     symbol_table_entry1 =
       cond do
@@ -127,7 +126,7 @@ defmodule Easm.Address do
 
   def address_expression(%ADotOut{} = _aout, current_line, tokens, is_indexed?)
       when is_integer(current_line) and is_list(tokens) do
-    {tokens, is_indexed?, "expression address"} |> dbg
+    {tokens, is_indexed?, "expression address"}
 
     symbol =
       Symbol.new(

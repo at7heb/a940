@@ -47,7 +47,7 @@ defmodule Easm.ProcessAssemblerFile do
 
       true ->
         new_aout = assemble_line(aout, current_line)
-        {current_line, new_aout.symbols} |> dbg
+        {current_line, new_aout.symbols}
         new_aout |> assemble_file()
     end
   end
@@ -65,9 +65,9 @@ defmodule Easm.ProcessAssemblerFile do
     # use Path module to change file name to **.o
     # write output file
     # IO.inspect(aout, label: "aout")
-    IO.inspect(aout.symbols, label: "aout symbols")
+    # IO.inspect(aout.symbols, label: "aout symbols")
     IO.inspect(file_path, label: "File processed")
-    aout
+    aout |> dbg
   end
 
   def make_aout(lines) when is_map(lines) do
