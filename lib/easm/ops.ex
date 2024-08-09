@@ -118,7 +118,7 @@ defmodule Easm.Ops do
         current_location,
         relocatable?,
         op_value,
-        %Symbol{},
+        "",
         :no_addr
       )
 
