@@ -2,12 +2,13 @@ defmodule ResolverTest do
   use ExUnit.Case
   doctest Easm.Resolver
   alias Easm.Resolver
+  alias Easm.Symbol
   # alias Easm.Symbol
   # alias Easm.Address
   # alias Easm.Memory
-  alias Easm.ADotOut
+  # alias Easm.ADotOut
 
-  test "can count # of resolved addresses in memory" do
+  test "can count # of resolved symbols" do
     # symbols = make_test_symbols() |> dbg
     # addresses = make_test_addresses(symbols) |> dbg
     # memory = make_test_memory(addresses)
@@ -25,20 +26,51 @@ defmodule ResolverTest do
 
   test "count # of known symbols" do
     aout = make_test_aout()
-    symbols = aout.symbols |> dbg
+    symbols = aout.symbols
     symbol_list = Map.to_list(symbols)
 
     known_symbols =
-      symbol_list |> Enum.filter(fn {name, defn} -> defn.state == :known end)
+      symbol_list |> Enum.filter(fn {_name, defn} -> defn.state == :known end)
 
     count = length(known_symbols)
     assert count == 2
   end
 
+  test "can find address to resolve" do
+    aout = make_test_aout()
+    in_need_of_resolution = Resolver.addresses_needing_resolution(aout)
+    assert length(in_need_of_resolution) == 2
+  end
+
   test "can resolve an address" do
+    aout = make_test_aout()
+    in_need_of_resolution = Resolver.addresses_needing_resolution(aout)
+    symbols = aout.symbols
+
+    new_expressions =
+      Enum.map(in_need_of_resolution, fn {name, defn} = syms ->
+        try_evaluating_expression(defn, symbols) |> dbg
+      end)
+      |> Enum.filter(fn expression -> expression != nil end)
+  end
+
+  test "can resolve an expression" do
   end
 
   test "can detect when unresolvable address exists" do
+  end
+
+  test "can detect when unresolvable expression exists" do
+  end
+
+  def try_evaluating_expression(defn, %{} = symbols) do
+    try do
+      Resolver.try_resolving_one(defn, symbols)
+    rescue
+      e in RuntimeError ->
+        e |> dbg
+        nil
+    end
   end
 
   def make_test_symbols() do
@@ -269,10 +301,10 @@ defmodule ResolverTest do
     ]
   end
 
-  def make_test_aout(_addresses, _memory), do: %ADotOut{}
+  # def make_test_aout(_addresses, _memory), do: %ADotOut{}
 
   def make_test_aout() do
-    %ADotOut{
+    %Easm.ADotOut{
       memory: [
         %Easm.Memory{
           address_relocation: 1,
@@ -316,27 +348,16 @@ defmodule ResolverTest do
           instruction_relocatable?: true,
           content: 1_245_196,
           address_field_type: :no_addr,
-          symbol_name: %Easm.Symbol{
-            state: false,
-            value: [1_000_000_000],
-            relocatable: true,
-            relocation: 0,
-            definition: [],
-            exported: false
-          },
+          symbol_name: "",
           end_action: nil
         },
         %Easm.Memory{
           address_relocation: 0,
+          location: 12,
+          instruction_relocatable?: true,
           content: 1_245_568,
           address_field_type: :no_addr,
-          symbol_name: %Easm.Symbol{
-            state: false,
-            value: [1_000_000_000],
-            relocatable: true,
-            relocation: 0,
-            exported: false
-          },
+          symbol_name: "",
           end_action: nil
         },
         %Easm.Memory{
@@ -345,14 +366,7 @@ defmodule ResolverTest do
           instruction_relocatable?: true,
           content: 1_245_188,
           address_field_type: :no_addr,
-          symbol_name: %Easm.Symbol{
-            state: false,
-            value: [1_000_000_000],
-            relocatable: true,
-            relocation: 0,
-            definition: [],
-            exported: false
-          },
+          symbol_name: "",
           end_action: nil
         },
         %Easm.Memory{
@@ -406,7 +420,7 @@ defmodule ResolverTest do
           instruction_relocatable?: true,
           content: 2_031_616,
           address_field_type: :mem_addr,
-          symbol_name: "E_b9746b11-b2bf-1016-a132-1299fae6ff71",
+          symbol_name: "E_925a7865-b2d1-1016-9c98-1299fae6ff71",
           end_action: nil
         },
         %Easm.Memory{
@@ -433,7 +447,7 @@ defmodule ResolverTest do
           instruction_relocatable?: true,
           content: 2_064_384,
           address_field_type: :mem_addr,
-          symbol_name: "E_b97451d8-b2bf-1016-a131-1299fae6ff71",
+          symbol_name: "E_925a62ab-b2d1-1016-9c97-1299fae6ff71",
           end_action: nil
         },
         %Easm.Memory{
@@ -472,15 +486,16 @@ defmodule ResolverTest do
           definition: [],
           exported: false
         },
-        "E_b97451d8-b2bf-1016-a131-1299fae6ff71" => %Easm.Symbol{
+        "E_925a62ab-b2d1-1016-9c97-1299fae6ff71" => %Easm.Symbol{
           state: :unknown,
           value: nil,
           relocatable: false,
           relocation: 0,
-          definition: [symbol: "A", operator: "+", number: "5"],
+          # definition: [symbol: "A", operator: "+", number: "5"],
+          definition: [symbol: "C", operator: "+", number: "5"],
           exported: false
         },
-        "E_b9746b11-b2bf-1016-a132-1299fae6ff71" => %Easm.Symbol{
+        "E_925a7865-b2d1-1016-9c98-1299fae6ff71" => %Easm.Symbol{
           state: :unknown,
           value: nil,
           relocatable: false,

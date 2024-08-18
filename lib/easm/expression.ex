@@ -126,7 +126,7 @@ defmodule Easm.Expression do
     new_token =
       cond do
         symbol_value == nil ->
-          throw(:undefined_expr)
+          raise "undefined_expr"
 
         symbol_value.state == :known ->
           {:value, {symbol_value.value, symbol_value.relocation}}
