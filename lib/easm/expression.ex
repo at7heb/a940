@@ -355,4 +355,16 @@ defmodule Easm.Expression do
       true -> raise "expression error"
     end
   end
+
+  @doc """
+  return value of expression, or else nil if expression cannot be evaluated yet.
+  """
+  def try_evaluating_expression(definition, %{} = symbols) do
+    try do
+      star = {2 ** 23 - 1, 5}
+      Expression.start_eval(definition, star, symbols) |> dbg
+    rescue
+      _e in RuntimeError -> nil
+    end
+  end
 end

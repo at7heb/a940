@@ -2,7 +2,8 @@ defmodule ResolverTest do
   use ExUnit.Case
   doctest Easm.Resolver
   alias Easm.Resolver
-  alias Easm.Symbol
+  alias Easm.Expression
+  # alias Easm.Symbol
   # alias Easm.Symbol
   # alias Easm.Address
   # alias Easm.Memory
@@ -48,10 +49,12 @@ defmodule ResolverTest do
     symbols = aout.symbols
 
     new_expressions =
-      Enum.map(in_need_of_resolution, fn {name, defn} = syms ->
-        try_evaluating_expression(defn, symbols) |> dbg
+      Enum.map(in_need_of_resolution, fn {_name, symbol} = _sym ->
+        Expression.try_evaluating_expression(symbol.definition, symbols) |> dbg
       end)
       |> Enum.filter(fn expression -> expression != nil end)
+
+    new_expressions |> dbg
   end
 
   test "can resolve an expression" do
@@ -61,16 +64,6 @@ defmodule ResolverTest do
   end
 
   test "can detect when unresolvable expression exists" do
-  end
-
-  def try_evaluating_expression(defn, %{} = symbols) do
-    try do
-      Resolver.try_resolving_one(defn, symbols)
-    rescue
-      e in RuntimeError ->
-        e |> dbg
-        nil
-    end
   end
 
   def make_test_symbols() do

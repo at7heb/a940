@@ -7,6 +7,7 @@ defmodule Easm.Assembly do
   # alias Easm.Address
   alias Easm.Lexer
   alias Easm.Memory
+  alias Easm.Resolver
 
   def assemble_lexons(%ADotOut{} = aout, line_number) when is_integer(line_number) do
     lexon_cursor = get_cursor(aout)
@@ -14,22 +15,25 @@ defmodule Easm.Assembly do
     # |> dbg
     Map.get(aout.lines, line_number)
 
-    cond do
-      Map.get(aout.lines, line_number, nil) == nil ->
-        IO.inspect("at end, or error in line")
-        add_flag(aout, :done)
+    new_aout =
+      cond do
+        Map.get(aout.lines, line_number, nil) == nil ->
+          IO.inspect("at end, or error in line")
+          add_flag(aout, :done)
 
-      true ->
-        aout
-        |> clean_for_new_statement()
+        true ->
+          aout
+          |> clean_for_new_statement()
 
-        recognize_comment(aout)
-        |> handle_label_part()
-        |> Ops.handle_operator_part()
-        # |> resolve_addresses()
-        # |> update_memory()
-        |> update_aout()
-    end
+          recognize_comment(aout)
+          |> handle_label_part()
+          |> Ops.handle_operator_part()
+          |> Resolver.resolve_addresses()
+          # |> update_memory()
+          |> update_aout()
+      end
+
+    new_aout |> dbg
   end
 
   def recognize_comment(%ADotOut{} = aout) do
