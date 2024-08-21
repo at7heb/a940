@@ -14,22 +14,25 @@ defmodule Easm.Assembly do
     # |> dbg
     Map.get(aout.lines, line_number)
 
-    cond do
-      Map.get(aout.lines, line_number, nil) == nil ->
-        IO.inspect("at end, or error in line")
-        add_flag(aout, :done)
+    new_aout =
+      cond do
+        Map.get(aout.lines, line_number, nil) == nil ->
+          IO.inspect("at end, or error in line")
+          add_flag(aout, :done)
 
-      true ->
-        aout
-        |> clean_for_new_statement()
+        true ->
+          aout
+          |> clean_for_new_statement()
 
-        recognize_comment(aout)
-        |> handle_label_part()
-        |> Ops.handle_operator_part()
-        # |> resolve_addresses()
-        # |> update_memory()
-        |> update_aout()
-    end
+          recognize_comment(aout)
+          |> handle_label_part()
+          |> Ops.handle_operator_part()
+          # |> Resolver.resolve_addresses()
+          # |> update_memory()
+          |> update_aout()
+      end
+
+    new_aout
   end
 
   def recognize_comment(%ADotOut{} = aout) do
@@ -222,6 +225,8 @@ defmodule Easm.Assembly do
     new_lines =
       Map.put(aout.lines, :finished_with_line, true)
       |> Map.put(:line_ok, ok?)
+
+    aout.memory |> dbg
 
     %{
       aout

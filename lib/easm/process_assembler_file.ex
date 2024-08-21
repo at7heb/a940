@@ -3,14 +3,15 @@ defmodule Easm.ProcessAssemblerFile do
   alias Easm.LexicalLine
   alias Easm.Assembly
   alias Easm.Lexer
+  alias Easm.Resolver
 
   def do_one_file(file_path)
       when is_binary(file_path) do
     read_and_condition_source(file_path)
     |> run_lexer()
-    # |> find_parts()
     |> assemble_file()
-    |> resolve_symbols()
+    |> Resolver.resolve_symbols()
+    |> ADotOut.update_addresses()
     |> output(file_path)
   end
 
@@ -47,7 +48,7 @@ defmodule Easm.ProcessAssemblerFile do
 
       true ->
         new_aout = assemble_line(aout, current_line)
-        {current_line, new_aout.symbols} |> dbg
+        {current_line, new_aout.symbols}
         new_aout |> assemble_file()
     end
   end
@@ -57,17 +58,13 @@ defmodule Easm.ProcessAssemblerFile do
     |> Assembly.assemble_lexons(line_number)
   end
 
-  def resolve_symbols(%ADotOut{} = aout) do
-    aout
-  end
-
   def output(%ADotOut{} = aout, file_path) when is_binary(file_path) do
     # use Path module to change file name to **.o
     # write output file
     # IO.inspect(aout, label: "aout")
-    IO.inspect(aout.symbols, label: "aout symbols")
+    # IO.inspect(aout.symbols, label: "aout symbols")
     IO.inspect(file_path, label: "File processed")
-    aout
+    aout |> dbg
   end
 
   def make_aout(lines) when is_map(lines) do

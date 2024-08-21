@@ -1,6 +1,9 @@
 defmodule Easm.ADotOut do
   alias Easm.Symbol
   alias Easm.ADotOut
+  alias Easm.Memory
+
+  import Bitwise
 
   defstruct memory: [],
             symbols: %{},
@@ -19,6 +22,10 @@ defmodule Easm.ADotOut do
             listing: [],
             # add {:psuedo, <the pseudo atom>}
             flags: []
+
+  @rch_mask 0o1777
+  @shift_mask 0o3777
+  @mem_mask 0o37777
 
   # each memory has {:relocatable, address, content} or {:absolute, address, content}
   # flags can have :absolute_location, :relative_location, :export_symbol
@@ -50,6 +57,7 @@ defmodule Easm.ADotOut do
   def handle_address_symbol(%ADotOut{symbols: symbols} = aout, symbol_name, %Symbol{} = symbol) do
     cond do
       Map.get(symbols, symbol_name) == nil ->
+        {"adding symbol", symbol_name, symbol} |> dbg
         add_symbol(aout, symbol_name, symbol)
 
       true ->
@@ -76,8 +84,6 @@ defmodule Easm.ADotOut do
   def update_label_in_symbol_table(%ADotOut{label: nil} = aout), do: aout
 
   def update_label_in_symbol_table(%ADotOut{symbols: symbols, label: symbol_name} = aout) do
-    {symbols, symbol_name} |> dbg
-
     {location, relocatable, relocation} =
       cond do
         aout.relocation_reference == :relocatable -> {aout.relocatable_location, true, 1}
@@ -95,11 +101,91 @@ defmodule Easm.ADotOut do
     }
 
     new_symbols = Map.put(aout.symbols, symbol_name, new_symbol)
-    new_symbols |> dbg
+    {symbol_name, new_symbol} |> dbg
     %{aout | symbols: new_symbols}
   end
 
   def clean_for_new_statement(%ADotOut{} = aout) do
     %{aout | label: ""}
+  end
+
+  @doc """
+  update addresses in aout.
+  """
+  def update_addresses(%ADotOut{} = aout) do
+    octal_list(aout.memory) |> dbg
+    new_memory = update_addresses(aout.memory, aout.symbols)
+    octal_list(aout.memory) |> dbg
+    %{aout | memory: new_memory}
+  end
+
+  @doc """
+  update addresses with just memory and symbols
+  """
+  def update_addresses(memory, symbols) when is_list(memory) and is_map(symbols) do
+    Enum.map(memory, fn mem -> maybe_update_address(mem, symbols) end)
+  end
+
+  @doc """
+  for a single instruction, may update address, but only if
+  the instruction has an address
+  """
+  def maybe_update_address(%Memory{} = mem, symbols) do
+    cond do
+      # nothing to do
+      mem.symbol_name == "" -> mem
+      true -> update_address(mem, Map.get(symbols, mem.symbol_name))
+    end
+  end
+
+  @doc """
+  if the symbol value is :known, can update the address.
+  This handles register change, shift, and memory address types.
+  :shift_addr, :rch_addr, or :mem_addr
+  """
+  def update_address(%Memory{} = mem, %Symbol{state: :unknown} = _symbol), do: mem
+  def update_address(%Memory{} = mem, %Symbol{state: :defined} = _symbol), do: mem
+
+  def update_address(
+        %Memory{address_field_type: :shift_addr} = mem,
+        %Symbol{state: :known, relocation: 0} = symbol
+      ),
+      do: update_address(mem, symbol, @shift_mask)
+
+  def update_address(
+        %Memory{address_field_type: :rch_addr} = mem,
+        %Symbol{state: :known, relocation: 0} = symbol
+      ),
+      do: update_address(mem, symbol, @rch_mask)
+
+  def update_address(
+        %Memory{address_field_type: :mem_addr} = mem,
+        %Symbol{state: :known} = symbol
+      ),
+      do: update_address(mem, symbol, @mem_mask)
+
+  def update_address(%Memory{} = mem, %Symbol{value: value} = symbol, mask)
+      when is_integer(mask) and is_integer(value) do
+    new_content = (mem.content &&& bnot(mask)) ||| (value &&& mask)
+    {"update address", mem.content, mask, value, new_content} |> dbg
+    %{mem | content: new_content, address_relocation: symbol.relocation, symbol_name: ""}
+  end
+
+  def update_address(%Memory{} = mem, %Symbol{value: value} = _symbol, mask)
+      when is_integer(mask) and is_tuple(value) do
+    {new_addr, new_relocation} = value
+    new_content = (mem.content &&& bnot(mask)) ||| (new_addr &&& mask)
+    {"update address", mem.content, mask, new_addr, new_content} |> dbg
+
+    %{mem | content: new_content, address_relocation: new_relocation, symbol_name: ""}
+  end
+
+  defp octal_list(memory) do
+    Enum.sort(memory, &(&1.location <= &2.location))
+    |> Enum.map(fn mem ->
+      Integer.to_string(mem.location, 8) <>
+        ": " <>
+        Integer.to_string(mem.address_relocation, 8) <> " " <> Integer.to_string(mem.content, 8)
+    end)
   end
 end

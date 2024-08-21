@@ -126,7 +126,7 @@ defmodule Easm.Expression do
     new_token =
       cond do
         symbol_value == nil ->
-          throw(:undefined_expr)
+          raise "undefined_expr"
 
         symbol_value.state == :known ->
           {:value, {symbol_value.value, symbol_value.relocation}}
@@ -353,6 +353,18 @@ defmodule Easm.Expression do
     cond do
       length(state.value_stack) == 1 -> hd(state.value_stack)
       true -> raise "expression error"
+    end
+  end
+
+  @doc """
+  return value of expression, or else nil if expression cannot be evaluated yet.
+  """
+  def try_evaluating_expression(definition, %{} = symbols) do
+    try do
+      star = {2 ** 23 - 1, 5}
+      Expression.start_eval(definition, star, symbols) |> dbg
+    rescue
+      _e in RuntimeError -> nil
     end
   end
 end
