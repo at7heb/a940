@@ -3,6 +3,7 @@ defmodule Easm.Assembly do
   alias Easm.ADotOut
   alias Easm.Symbol
   alias Easm.Ops
+  alias Easm.ListingLine
   # alias Easm.Pseudos
   # alias Easm.Address
   alias Easm.Lexer
@@ -141,19 +142,20 @@ defmodule Easm.Assembly do
       true ->
         mem = hd(aout.memory)
         location = mem.location
-        relocatable? = mem.instruction_relocatable?
+        relocation = mem.instruction_relocation
         content = mem.content
-
-        location_tag =
-          (Integer.to_string(location, 8)
-           |> String.pad_leading(@address_width, "0")) <> if relocatable?, do: " ", else: "A"
-
-        content_tag = Integer.to_string(content, 8) |> String.pad_leading(@content_width, "0")
 
         {%LexicalLine{original: original} = _line_lex, _line_position, _token} =
           get_token_info(aout)
 
-        " #{location_tag} #{content_tag}  #{original}"
+        ListingLine.new(location, relocation, content, original)
+        # location_tag =
+        #   (Integer.to_string(location, 8)
+        #    |> String.pad_leading(@address_width, "0")) <> if relocatable?, do: " ", else: "A"
+
+        # content_tag = Integer.to_string(content, 8) |> String.pad_leading(@content_width, "0")
+
+        # " #{location_tag} #{content_tag}  #{original}"
     end
   end
 

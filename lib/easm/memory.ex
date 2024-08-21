@@ -5,7 +5,7 @@ defmodule Easm.Memory do
 
   defstruct address_relocation: 0,
             location: 0,
-            instruction_relocatable?: true,
+            instruction_relocation: 1,
             content: 999_999_999,
             # address_field_type is one of :no_addr, :shift_addr, :rch_addr, or :mem_addr
             address_field_type: :no_addr,
@@ -15,17 +15,17 @@ defmodule Easm.Memory do
   def memory(
         address_relocation,
         location,
-        instruction_relocatable?,
+        instruction_relocation,
         content,
         symbol_name,
         address_type,
         end_action \\ nil
       )
-      when is_integer(address_relocation) and is_boolean(instruction_relocatable?) do
+      when is_integer(address_relocation) and is_integer(instruction_relocation) do
     %Easm.Memory{
       address_relocation: address_relocation,
       location: location,
-      instruction_relocatable?: instruction_relocatable?,
+      instruction_relocation: instruction_relocation,
       content: content,
       address_field_type: address_type,
       symbol_name: symbol_name,
