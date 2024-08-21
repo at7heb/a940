@@ -3,14 +3,15 @@ defmodule Easm.ProcessAssemblerFile do
   alias Easm.LexicalLine
   alias Easm.Assembly
   alias Easm.Lexer
+  alias Easm.Resolver
 
   def do_one_file(file_path)
       when is_binary(file_path) do
     read_and_condition_source(file_path)
     |> run_lexer()
-    # |> find_parts()
     |> assemble_file()
-    |> resolve_symbols()
+    |> Resolver.resolve_symbols()
+    |> ADotOut.update_addresses()
     |> output(file_path)
   end
 
@@ -55,10 +56,6 @@ defmodule Easm.ProcessAssemblerFile do
   def assemble_line(%ADotOut{} = aout, line_number) when is_integer(line_number) do
     Assembly.initialize_for_a_line_assembly(aout, line_number)
     |> Assembly.assemble_lexons(line_number)
-  end
-
-  def resolve_symbols(%ADotOut{} = aout) do
-    aout
   end
 
   def output(%ADotOut{} = aout, file_path) when is_binary(file_path) do

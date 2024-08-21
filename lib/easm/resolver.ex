@@ -3,16 +3,16 @@ defmodule Easm.Resolver do
   alias Easm.ADotOut
   alias Easm.Expression
 
-  def resolve_addresses(%ADotOut{} = aout) do
+  def resolve_symbols(%ADotOut{} = aout) do
     unknown_symbols = get_unknown_symbols(aout)
-    resolve_addresses(aout, unknown_symbols, length(unknown_symbols))
+    resolve_symbols(aout, unknown_symbols, length(unknown_symbols))
   end
 
   @doc """
   helper
   """
-  def resolve_addresses(%ADotOut{} = aout, unknown_symbols, current_count),
-    do: resolve_addresses(aout, unknown_symbols, current_count + 1, current_count)
+  def resolve_symbols(%ADotOut{} = aout, unknown_symbols, current_count),
+    do: resolve_symbols(aout, unknown_symbols, current_count + 1, current_count)
 
   @doc """
   try to define (:unknown to :known state) as many symbols as possible.
@@ -24,26 +24,26 @@ defmodule Easm.Resolver do
   First make it work, then make it beautiful, then optimize if necessary.
   MIW, MIB, OIN
   """
-  def resolve_addresses(%ADotOut{} = aout, _unknown_symbols, _previous_count, 0 = _current_count),
+  def resolve_symbols(%ADotOut{} = aout, _unknown_symbols, _previous_count, 0 = _current_count),
     do: aout
 
-  def resolve_addresses(%ADotOut{} = aout, _unknown_symbols, previous_count, current_count)
+  def resolve_symbols(%ADotOut{} = aout, _unknown_symbols, previous_count, current_count)
       when previous_count == current_count do
     aout
   end
 
-  def resolve_addresses(%ADotOut{} = aout, unknown_symbols, previous_count, current_count)
+  def resolve_symbols(%ADotOut{} = aout, unknown_symbols, previous_count, current_count)
       when previous_count > current_count do
     newly_defined_symbols =
-      Enum.map(unknown_symbols, fn {name, defn} = _syms ->
-        {name, Expression.try_evaluating_expression(defn, aout.symbols)}
+      Enum.map(unknown_symbols, fn {name, symbol} = _syms ->
+        {name, Expression.try_evaluating_expression(symbol.definition, aout.symbols)}
       end)
       |> Enum.filter(fn {_name, expression} -> expression != nil end)
 
     new_symbol_table = update_symbol_table(aout.symbols, newly_defined_symbols)
     new_aout = %{aout | symbols: new_symbol_table}
 
-    resolve_addresses(
+    resolve_symbols(
       new_aout,
       get_unknown_symbols(new_aout),
       current_count,
