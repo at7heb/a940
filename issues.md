@@ -3,7 +3,7 @@
 |num|pri|info|status|
 |---|---|----|--|
 |1|3|resolve symbols after assembly before listing|done|
-|2|2|fix listings after update|open|
+|2|2|fix listings after update|done|
 |3|2|handle =12525253B literals|open|
 |4|1|define output format|open|
 |5|1|write output tests|open|

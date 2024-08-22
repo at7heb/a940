@@ -36,10 +36,10 @@ defmodule Easm.Memory do
   def get_location(%ADotOut{} = aout) do
     case aout.relocation_reference do
       :absolute ->
-        {aout.absolute_location, false}
+        {aout.absolute_location, 0}
 
       :relocatable ->
-        {aout.relocatable_location, true}
+        {aout.relocatable_location, 1}
 
       # one or the other of these flags normally set, but at "2BAS IDENT" time, not...
       _ ->

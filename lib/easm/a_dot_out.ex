@@ -1,6 +1,7 @@
 defmodule Easm.ADotOut do
   alias Easm.Symbol
   alias Easm.ADotOut
+  alias Easm.ListingLine
   alias Easm.Memory
 
   import Bitwise
@@ -57,7 +58,7 @@ defmodule Easm.ADotOut do
   def handle_address_symbol(%ADotOut{symbols: symbols} = aout, symbol_name, %Symbol{} = symbol) do
     cond do
       Map.get(symbols, symbol_name) == nil ->
-        {"adding symbol", symbol_name, symbol} |> dbg
+        # {"adding symbol", symbol_name, symbol} |> dbg
         add_symbol(aout, symbol_name, symbol)
 
       true ->
@@ -101,7 +102,7 @@ defmodule Easm.ADotOut do
     }
 
     new_symbols = Map.put(aout.symbols, symbol_name, new_symbol)
-    {symbol_name, new_symbol} |> dbg
+    # {symbol_name, new_symbol} |> dbg
     %{aout | symbols: new_symbols}
   end
 
@@ -113,9 +114,9 @@ defmodule Easm.ADotOut do
   update addresses in aout.
   """
   def update_addresses(%ADotOut{} = aout) do
-    octal_list(aout.memory) |> dbg
+    # octal_list(aout.memory) |> dbg
     new_memory = update_addresses(aout.memory, aout.symbols)
-    octal_list(aout.memory) |> dbg
+    # octal_list(aout.memory) |> dbg
     %{aout | memory: new_memory}
   end
 
@@ -175,17 +176,55 @@ defmodule Easm.ADotOut do
       when is_integer(mask) and is_tuple(value) do
     {new_addr, new_relocation} = value
     new_content = (mem.content &&& bnot(mask)) ||| (new_addr &&& mask)
-    {"update address", mem.content, mask, new_addr, new_content} |> dbg
+    # {"update address", mem.content, mask, new_addr, new_content} |> dbg
 
     %{mem | content: new_content, address_relocation: new_relocation, symbol_name: ""}
   end
 
-  defp octal_list(memory) do
-    Enum.sort(memory, &(&1.location <= &2.location))
-    |> Enum.map(fn mem ->
-      Integer.to_string(mem.location, 8) <>
-        ": " <>
-        Integer.to_string(mem.address_relocation, 8) <> " " <> Integer.to_string(mem.content, 8)
+  def update_listing_content(%ADotOut{} = aout) do
+    mem_map = make_memory_map(aout.memory)
+
+    new_listing =
+      Enum.map(aout.listing, fn one_line -> update_one_line_listing(one_line, mem_map) end)
+
+    %{aout | listing: new_listing}
+  end
+
+  def list(%ADotOut{listing: listing} = aout) do
+    Enum.sort(listing, fn l1, l2 ->
+      l1.relocation <= l2.relocation and l1.location <= l2.location
     end)
+    |> Enum.each(fn l -> IO.puts(ListingLine.to_string(l)) end)
+
+    aout
+  end
+
+  # defp octal_list(memory) do
+  #   Enum.sort(memory, &(&1.location <= &2.location))
+  #   |> Enum.map(fn mem ->
+  #     Integer.to_string(mem.location, 8) <>
+  #       ": " <>
+  #       Integer.to_string(mem.address_relocation, 8) <> " " <> Integer.to_string(mem.content, 8)
+  #   end)
+  # end
+
+  defp make_memory_map(memory) when is_list(memory) do
+    Enum.reduce(memory, %{}, fn mem, map ->
+      Map.put(map, {mem.instruction_relocation, mem.location}, mem.content)
+    end)
+  end
+
+  defp update_one_line_listing(
+         %ListingLine{location: location, relocation: relocation} = one_line,
+         %{} = mem_map
+       ) do
+    # defstruct location: 0, relocation: 0, content: 0, text: ""
+    new_content = Map.get(mem_map, {relocation, location}, 0o77777777)
+
+    if {relocation, location} != new_content do
+      # {"update one line listing", new_content, {relocation, location}} |> dbg
+    end
+
+    ListingLine.update_content(one_line, new_content)
   end
 end

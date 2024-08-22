@@ -56,13 +56,12 @@ defmodule Easm.Resolver do
     Enum.reduce(symbol_definitions, symbol_table, fn one_definition, symbols ->
       update_symbol_table(symbols, one_definition)
     end)
-    |> dbg
   end
 
   def update_symbol_table(%{} = symbol_table, {symbol_name, value}) do
     symbol = Map.get(symbol_table, symbol_name)
     new_symbol = %{symbol | state: :known, value: value, definition: []}
-    {symbol_name, symbol, new_symbol} |> dbg
+    # {symbol_name, symbol, new_symbol} |> dbg
     Map.put(symbol_table, symbol_name, new_symbol)
   end
 

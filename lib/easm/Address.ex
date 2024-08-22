@@ -94,10 +94,11 @@ defmodule Easm.Address do
     rescue
       _e in RuntimeError ->
         symbol = Symbol.new(nil, relevant_tokens, :unknown)
-        {"address rescue", {indexing_atom, :expression, symbol}} |> dbg
+        # {"address rescue", {indexing_atom, :expression, symbol}} |> dbg
         {indexing_atom, :expression, symbol}
     end
-    |> dbg
+
+    # |> dbg
   end
 
   def literal_address(%ADotOut{} = _aout, current_line, tokens, is_indexed?)

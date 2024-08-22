@@ -362,7 +362,7 @@ defmodule Easm.Expression do
   def try_evaluating_expression(definition, %{} = symbols) do
     try do
       star = {2 ** 23 - 1, 5}
-      Expression.start_eval(definition, star, symbols) |> dbg
+      Expression.start_eval(definition, star, symbols)
     rescue
       _e in RuntimeError -> nil
     end

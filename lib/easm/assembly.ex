@@ -10,8 +10,8 @@ defmodule Easm.Assembly do
   alias Easm.Memory
 
   def assemble_lexons(%ADotOut{} = aout, line_number) when is_integer(line_number) do
-    lexon_cursor = get_cursor(aout)
-    IO.puts("assemble_lexons line #{line_number} lexon #{lexon_cursor}")
+    # lexon_cursor = get_cursor(aout)
+    # IO.puts("assemble_lexons line #{line_number} lexon #{lexon_cursor}")
     # |> dbg
     Map.get(aout.lines, line_number)
 
@@ -227,8 +227,6 @@ defmodule Easm.Assembly do
     new_lines =
       Map.put(aout.lines, :finished_with_line, true)
       |> Map.put(:line_ok, ok?)
-
-    aout.memory |> dbg
 
     %{
       aout

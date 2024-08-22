@@ -2,7 +2,7 @@
 
 defmodule E do
   def print_listing(listing_list) do
-    Enum.each(listing_list, &IO.puts(&1))
+    Enum.each(listing_list, &IO.puts(Easm.ListingLine.to_string(&1)))
   end
 
   def print_memory(memory) do
@@ -24,7 +24,7 @@ Enum.each(
   file_list,
   fn path ->
     aout = Easm.ProcessAssemblerFile.do_one_file(path)
-    E.print_memory(aout.memory)
+    # E.print_memory(aout.memory)
     E.print_listing(Enum.reverse(aout.listing))
   end
 )

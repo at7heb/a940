@@ -110,13 +110,13 @@ defmodule Easm.Ops do
 
   def handle_op(%ADotOut{} = aout, %LexicalLine{} = _ll, op_value, :no_addr, _indirect?) do
     # handle the op_value; put it in the memory.
-    {current_location, relocatable?} = Memory.get_location(aout)
+    {current_location, relocation} = Memory.get_location(aout)
 
     memory_entry =
       Memory.memory(
         0,
         current_location,
-        relocatable?,
+        relocation,
         op_value,
         "",
         :no_addr
@@ -137,7 +137,7 @@ defmodule Easm.Ops do
         indirect?
       ) do
     # handle the op_value; put it in the memory.
-    {current_location, relocatable?} = Memory.get_location(aout)
+    {current_location, instruction_relocation} = Memory.get_location(aout)
 
     {index_info, type, address_definition} = Address.get_address(aout)
     # {index_info, type, address_definition} |> dbg
@@ -168,7 +168,7 @@ defmodule Easm.Ops do
       Memory.memory(
         relocation,
         current_location,
-        relocatable?,
+        instruction_relocation,
         new_op_value,
         symbol_name,
         :mem_addr

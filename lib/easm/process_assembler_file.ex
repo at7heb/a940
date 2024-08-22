@@ -1,6 +1,7 @@
 defmodule Easm.ProcessAssemblerFile do
   alias Easm.ADotOut
   alias Easm.LexicalLine
+  # alias Easm.ListingLine
   alias Easm.Assembly
   alias Easm.Lexer
   alias Easm.Resolver
@@ -12,6 +13,8 @@ defmodule Easm.ProcessAssemblerFile do
     |> assemble_file()
     |> Resolver.resolve_symbols()
     |> ADotOut.update_addresses()
+    |> ADotOut.update_listing_content()
+    # |> ADotOut.list()
     |> output(file_path)
   end
 
@@ -64,7 +67,7 @@ defmodule Easm.ProcessAssemblerFile do
     # IO.inspect(aout, label: "aout")
     # IO.inspect(aout.symbols, label: "aout symbols")
     IO.inspect(file_path, label: "File processed")
-    aout |> dbg
+    aout
   end
 
   def make_aout(lines) when is_map(lines) do
