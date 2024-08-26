@@ -48,13 +48,12 @@ defmodule ResolverTest do
     in_need_of_resolution = Resolver.addresses_needing_resolution(aout)
     symbols = aout.symbols
 
-    new_expressions =
-      Enum.map(in_need_of_resolution, fn {_name, symbol} = _sym ->
-        Expression.try_evaluating_expression(symbol.definition, symbols) |> dbg
-      end)
-      |> Enum.filter(fn expression -> expression != nil end)
+    Enum.map(in_need_of_resolution, fn {_name, symbol} = _sym ->
+      Expression.try_evaluating_expression(symbol.definition, symbols)
+    end)
+    |> Enum.filter(fn expression -> expression != nil end)
 
-    new_expressions |> dbg
+    # |> dbg
   end
 
   test "can resolve an expression" do

@@ -183,11 +183,17 @@ defmodule Easm.Ops do
         :mem_addr
       )
 
-    %{aout | memory: [memory_entry | aout.memory]}
-    |> ADotOut.update_label_in_symbol_table()
-    |> ADotOut.increment_current_location()
-    |> ADotOut.handle_address_symbol(symbol_name, symbol)
+    new_aout =
+      %{aout | memory: [memory_entry | aout.memory]}
+      |> ADotOut.update_label_in_symbol_table()
+      |> ADotOut.increment_current_location()
+      |> ADotOut.handle_address_symbol(symbol_name, symbol)
 
+    # if current_location == 1 do
+    #   dbg(new_aout)
+    # end
+
+    new_aout
     # can add symbol, indirect, or indexed to hd(aout.memory).
   end
 

@@ -155,6 +155,8 @@ defmodule Easm.ADotOut do
     cond do
       # nothing to do
       mem.symbol_name == "" -> mem
+      String.starts_with?(mem.symbol_name, "LE") -> mem
+      String.starts_with?(mem.symbol_name, "LV") -> mem
       true -> update_address(mem, Map.get(symbols, mem.symbol_name))
     end
   end

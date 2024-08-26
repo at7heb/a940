@@ -97,6 +97,9 @@ defmodule Easm.Resolver do
   end
 
   def get_unknown_symbols(%ADotOut{} = aout) do
-    Enum.filter(aout.symbols, fn {_name, defn} -> defn.state == :unknown end)
+    Enum.filter(aout.symbols, fn {name, defn} ->
+      defn.state == :unknown and
+        not (String.starts_with?(name, "LV") or String.starts_with?(name, "LE"))
+    end)
   end
 end
