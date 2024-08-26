@@ -65,41 +65,64 @@ defmodule Easm.Address do
       )
       when is_integer(current_line) do
     {is_indexed?, non_indexed_addr_tokens} = is_indexed(addr_tokens)
+    {is_literal, literal_tokens} = is_literal?(addr_tokens)
     # {is_constant?, constant_value} = is_constant(non_indexed_addr_tokens)
-    # {is_literal?, literal_tokens} = is_literal(non_indexed_addr_tokens)
     # {is_symbol?, symbol_token} = is_symbol(non_indexed_addr_tokens)
     # {is_expression?, expression_tokens} = is_expression(non_indexed_addr_tokens)
+    # MIB: refactor to "case {is_indexed?, is_literal} do"
     relevant_tokens =
       cond do
         is_indexed? -> non_indexed_addr_tokens
+        is_literal -> literal_tokens
         true -> addr_tokens
       end
 
     indexing_atom =
-      case is_indexed?,
-        do: (
-          true -> :indexed_yes
-          false -> :indexed_no
-        )
+      cond do: (
+             is_indexed? and is_literal -> raise "cannot index literals"
+             is_indexed? -> :indexed_yes
+             not is_indexed? -> :indexed_no
+           )
 
-    try do
-      {value, relocation} =
-        Expression.start_eval(
-          relevant_tokens,
-          ADotOut.get_current_location(aout),
-          aout.symbols
-        )
+    {type, value_for_type} =
+      try do
+        {value, relocation} =
+          Expression.start_eval(
+            relevant_tokens,
+            ADotOut.get_current_location(aout),
+            aout.symbols
+          )
 
-      {indexing_atom, :value, {value, relocation}}
-    rescue
-      _e in RuntimeError ->
-        symbol = Symbol.new(nil, relevant_tokens, :unknown)
-        # {"address rescue", {indexing_atom, :expression, symbol}} |> dbg
-        {indexing_atom, :expression, symbol}
-    end
+        {:value, {value, relocation}}
+      rescue
+        _e in RuntimeError ->
+          symbol = Symbol.new(nil, relevant_tokens, :unknown)
+          # {"address rescue", {indexing_atom, :expression, symbol}} |> dbg
+          {:expression, symbol}
+      end
 
+    literal_value_or_expression(is_literal, indexing_atom, type, value_for_type)
     # |> dbg
   end
+
+  defp literal_value_or_expression(false = _is_literal, indexing_atom, type, value),
+    do: {indexing_atom, type, value}
+
+  defp literal_value_or_expression(
+         true = _is_literal,
+         :indexed_no = indexing_atom,
+         :expression = _type,
+         value
+       ),
+       do: {indexing_atom, :literal_expression, value}
+
+  defp literal_value_or_expression(
+         true = _is_literal,
+         :indexed_no = indexing_atom,
+         :value = _type,
+         value
+       ),
+       do: {indexing_atom, :literal_value, value}
 
   def literal_address(%ADotOut{} = _aout, current_line, tokens, is_indexed?)
       when is_integer(current_line) and is_list(tokens) do
@@ -176,7 +199,7 @@ defmodule Easm.Address do
     end
   end
 
-  def is_literal([first | rest] = addr_tokens) when is_list(addr_tokens) do
+  def is_literal?([first | rest] = addr_tokens) when is_list(addr_tokens) do
     cond do
       {:operator, "="} == first and length(rest) > 0 -> {true, rest}
       true -> {false, addr_tokens}
@@ -244,6 +267,7 @@ defmodule Easm.Address do
         _literal_tokens,
         _is_indexed?
       ) do
+    # TODO: finish
     aout
   end
 
@@ -294,7 +318,7 @@ defmodule Easm.Address do
       when is_integer(current_line) do
     {is_indexed?, non_indexed_addr_tokens} = is_indexed(addr_tokens)
     {is_constant?, constant_value} = is_constant(non_indexed_addr_tokens)
-    {is_literal?, literal_tokens} = is_literal(non_indexed_addr_tokens)
+    {is_literal, literal_tokens} = is_literal?(non_indexed_addr_tokens)
     {is_symbol?, symbol_token} = is_symbol(non_indexed_addr_tokens)
     {is_expression?, expression_tokens} = is_expression(non_indexed_addr_tokens)
 
@@ -302,7 +326,7 @@ defmodule Easm.Address do
       is_constant? ->
         handle_address_constant(aout, constant_value, is_indexed?)
 
-      is_literal? ->
+      is_literal ->
         handle_address_literal(aout, current_line, literal_tokens, is_indexed?)
 
       is_symbol? ->

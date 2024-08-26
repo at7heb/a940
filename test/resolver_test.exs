@@ -111,7 +111,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 1,
         location: 17,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 2_064_393,
         address_field_type: :mem_addr,
         symbol_name: "",
@@ -120,7 +120,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 0,
         location: 16,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 6_258_687,
         address_field_type: :mem_addr,
         symbol_name: "",
@@ -129,7 +129,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 0,
         location: 15,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 6_242_303,
         address_field_type: :mem_addr,
         symbol_name: "",
@@ -138,7 +138,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 0,
         location: 14,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 2_047_999,
         address_field_type: :mem_addr,
         symbol_name: "",
@@ -147,7 +147,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 0,
         location: 13,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 1_245_196,
         address_field_type: :no_addr,
         symbol_name: %Easm.Symbol{
@@ -163,7 +163,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 0,
         location: 12,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 1_245_568,
         address_field_type: :no_addr,
         symbol_name: %Easm.Symbol{
@@ -179,7 +179,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 0,
         location: 11,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 1_245_188,
         address_field_type: :no_addr,
         symbol_name: %Easm.Symbol{
@@ -195,7 +195,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 0,
         location: 10,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 967_266,
         address_field_type: :mem_addr,
         symbol_name: "",
@@ -204,7 +204,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 0,
         location: 9,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 950_872,
         address_field_type: :mem_addr,
         symbol_name: "",
@@ -213,7 +213,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 0,
         location: 8,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 2_032_116,
         address_field_type: :mem_addr,
         symbol_name: "",
@@ -222,7 +222,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 0,
         location: 7,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 32868,
         address_field_type: :mem_addr,
         symbol_name: "",
@@ -231,7 +231,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 1,
         location: 6,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 2_031_620,
         address_field_type: :mem_addr,
         symbol_name: "",
@@ -240,7 +240,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 0,
         location: 5,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 2_031_616,
         address_field_type: :mem_addr,
         symbol_name: "E_19027018-b2a1-1016-8472-1299fae6ff71",
@@ -249,7 +249,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 0,
         location: 4,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 524_288,
         address_field_type: :mem_addr,
         symbol_name: "",
@@ -258,7 +258,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 0,
         location: 3,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 32868,
         address_field_type: :mem_addr,
         symbol_name: "",
@@ -267,7 +267,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 0,
         location: 2,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 2_064_384,
         address_field_type: :mem_addr,
         symbol_name: "E_19026803-b2a1-1016-8471-1299fae6ff71",
@@ -276,7 +276,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 1,
         location: 1,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 32774,
         address_field_type: :mem_addr,
         symbol_name: "",
@@ -285,7 +285,7 @@ defmodule ResolverTest do
       %Easm.Memory{
         address_relocation: 1,
         location: 0,
-        instruction_relocatable?: true,
+        instruction_relocation: 1,
         content: 49147,
         address_field_type: :mem_addr,
         symbol_name: "",
@@ -302,7 +302,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 1,
           location: 17,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 2_064_393,
           address_field_type: :mem_addr,
           symbol_name: "",
@@ -311,7 +311,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 0,
           location: 16,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 6_258_687,
           address_field_type: :mem_addr,
           symbol_name: "",
@@ -320,7 +320,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 0,
           location: 15,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 6_242_303,
           address_field_type: :mem_addr,
           symbol_name: "",
@@ -329,7 +329,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 0,
           location: 14,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 2_047_999,
           address_field_type: :mem_addr,
           symbol_name: "",
@@ -338,7 +338,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 0,
           location: 13,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 1_245_196,
           address_field_type: :no_addr,
           symbol_name: "",
@@ -347,7 +347,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 0,
           location: 12,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 1_245_568,
           address_field_type: :no_addr,
           symbol_name: "",
@@ -356,7 +356,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 0,
           location: 11,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 1_245_188,
           address_field_type: :no_addr,
           symbol_name: "",
@@ -365,7 +365,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 0,
           location: 10,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 967_266,
           address_field_type: :mem_addr,
           symbol_name: "",
@@ -374,7 +374,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 0,
           location: 9,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 950_872,
           address_field_type: :mem_addr,
           symbol_name: "",
@@ -383,7 +383,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 0,
           location: 8,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 2_032_116,
           address_field_type: :mem_addr,
           symbol_name: "",
@@ -392,7 +392,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 0,
           location: 7,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 32868,
           address_field_type: :mem_addr,
           symbol_name: "",
@@ -401,7 +401,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 1,
           location: 6,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 2_031_620,
           address_field_type: :mem_addr,
           symbol_name: "",
@@ -410,7 +410,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 0,
           location: 5,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 2_031_616,
           address_field_type: :mem_addr,
           symbol_name: "E_925a7865-b2d1-1016-9c98-1299fae6ff71",
@@ -419,7 +419,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 0,
           location: 4,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 524_288,
           address_field_type: :mem_addr,
           symbol_name: "",
@@ -428,7 +428,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 0,
           location: 3,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 32868,
           address_field_type: :mem_addr,
           symbol_name: "",
@@ -437,7 +437,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 0,
           location: 2,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 2_064_384,
           address_field_type: :mem_addr,
           symbol_name: "E_925a62ab-b2d1-1016-9c97-1299fae6ff71",
@@ -446,7 +446,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 1,
           location: 1,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 32774,
           address_field_type: :mem_addr,
           symbol_name: "",
@@ -455,7 +455,7 @@ defmodule ResolverTest do
         %Easm.Memory{
           address_relocation: 1,
           location: 0,
-          instruction_relocatable?: true,
+          instruction_relocation: 1,
           content: 49147,
           address_field_type: :mem_addr,
           symbol_name: "",

@@ -11,6 +11,7 @@ defmodule Easm.ProcessAssemblerFile do
     read_and_condition_source(file_path)
     |> run_lexer()
     |> assemble_file()
+    # handle symbols used before definition, address expressions, and literals
     |> Resolver.resolve_symbols()
     |> ADotOut.update_addresses()
     |> ADotOut.update_listing_content()
@@ -67,7 +68,7 @@ defmodule Easm.ProcessAssemblerFile do
     # IO.inspect(aout, label: "aout")
     # IO.inspect(aout.symbols, label: "aout symbols")
     IO.inspect(file_path, label: "File processed")
-    aout
+    aout |> dbg
   end
 
   def make_aout(lines) when is_map(lines) do

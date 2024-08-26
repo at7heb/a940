@@ -157,11 +157,20 @@ defmodule Easm.Ops do
           {op_value ||| index_bit(index_info) ||| indirect_bit(indirect?), 0, name,
            address_definition}
 
+        # literals must not be indexed
+        # indirect with literal is kinda weird
+        # later resolve number vs. expression
+        type == :literal_value or type == :literal_expression ->
+          name = Symbol.generate_name(type)
+
+          {op_value ||| indirect_bit(indirect?), 0, name, address_definition}
+
         type == :no_address ->
           {op_value, 0, "", nil}
 
+        # flag an error to developer
         true ->
-          {op_value, 0, "", nil}
+          {op_value ||| 0o77777777, 0, "", nil}
       end
 
     memory_entry =

@@ -70,6 +70,26 @@ defmodule Easm.ADotOut do
 
   def handle_address_symbol(%ADotOut{} = aout, _name, nil), do: aout
 
+  # this is called when adding a symbol for a literal like =12525253.
+  # could also be called for =A where A has been previously defined.
+  def handle_address_symbol(
+        %ADotOut{symbols: symbols} = aout,
+        symbol_name,
+        {val, relocation} = _value
+      ) do
+    cond do
+      Map.get(symbols, symbol_name) == nil ->
+        # {"adding symbol", symbol_name, symbol} |> dbg
+        symbol = Symbol.new(val, [], :known, relocation)
+        add_symbol(aout, symbol_name, symbol)
+
+      true ->
+        raise "Literal symbol #{symbol_name} is not unique but should be!"
+
+        # if already in the symbol table, could be previous LOOP1 STA A,2 or else STRINCR EQU 3; ... EAX STRINCR
+    end
+  end
+
   def handle_address_symbol(%ADotOut{} = _aout, name, value) do
     {"name and value do not compute", name, value} |> dbg
     raise "symbol name and value do not compute"
@@ -168,7 +188,7 @@ defmodule Easm.ADotOut do
   def update_address(%Memory{} = mem, %Symbol{value: value} = symbol, mask)
       when is_integer(mask) and is_integer(value) do
     new_content = (mem.content &&& bnot(mask)) ||| (value &&& mask)
-    {"update address", mem.content, mask, value, new_content} |> dbg
+    # {"update address", mem.content, mask, value, new_content} |> dbg
     %{mem | content: new_content, address_relocation: symbol.relocation, symbol_name: ""}
   end
 

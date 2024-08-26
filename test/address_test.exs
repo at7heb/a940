@@ -43,7 +43,7 @@ defmodule AddressTest do
     [
       &Address.is_indexed/1,
       &Address.is_constant/1,
-      &Address.is_literal/1,
+      &Address.is_literal?/1,
       &Address.is_symbol/1,
       &Address.is_expression/1
     ]
@@ -62,9 +62,10 @@ defmodule AddressTest do
         # {num, is?, val} |> dbg
         {is_result, val_result} = fun.(test_input)
 
-        # {num, is?, val, is_result, val_result, test_input} |> dbg
+        {num, is?, val, is_result, val_result, test_input} |> dbg
 
-        # val_result == test_input |> dbg()
+        test_input |> dbg()
+        val_result |> dbg()
 
         assert is_result == is? and
                  (val_result == val or (val == :ditto and val_result == test_input))

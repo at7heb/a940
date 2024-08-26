@@ -75,10 +75,17 @@ defmodule Easm.Symbol do
     }
   end
 
-  def new(symbol_value \\ nil, tokens \\ [], state \\ :unknown) do
-    %Symbol{value: symbol_value, state: state, definition: tokens, relocatable: false}
+  def new(symbol_value \\ nil, tokens \\ [], state \\ :unknown, relocation \\ 0) do
+    %Symbol{
+      value: symbol_value,
+      state: state,
+      definition: tokens,
+      relocatable: false,
+      relocation: relocation
+    }
   end
 
-  def generate_name(:literal), do: "L_" <> Uniq.UUID.uuid1()
+  def generate_name(:literal_value), do: "LV_" <> Uniq.UUID.uuid1()
+  def generate_name(:literal_expression), do: "LE_" <> Uniq.UUID.uuid1()
   def generate_name(:expression), do: "E_" <> Uniq.UUID.uuid1()
 end

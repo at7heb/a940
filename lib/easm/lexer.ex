@@ -38,6 +38,10 @@ defmodule Easm.Lexer do
 
   def tokens_no_short_circuit(line, token_list) do
     cond do
+      false != match_octal_number(line) ->
+        {true, token, rest_of_line} = match_octal_number(line)
+        tokens(rest_of_line, [token | token_list])
+
       false != match_number(line) ->
         {true, token, rest_of_line} = match_number(line)
         tokens(rest_of_line, [token | token_list])
@@ -48,10 +52,6 @@ defmodule Easm.Lexer do
 
       false != match_symbol(line) ->
         {true, token, rest_of_line} = match_symbol(line)
-        tokens(rest_of_line, [token | token_list])
-
-      false != match_octal_number(line) ->
-        {true, token, rest_of_line} = match_octal_number(line)
         tokens(rest_of_line, [token | token_list])
 
       false != match_white_space(line) ->

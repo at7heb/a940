@@ -1,5 +1,6 @@
 defmodule Easm.Expression do
   alias Easm.Expression
+  alias Easm.Lexer
   # alias Easm.Symbol
 
   defstruct operation_stack: [],
@@ -271,16 +272,10 @@ defmodule Easm.Expression do
     end
   end
 
-  # def convert_token({:symbol, symbol_name}, symbols) do
-  #   symbol = Map.get(symbols, symbol_name, nil)
+  def convert_token({:number, number_text}, _), do: {:value, Lexer.number_value(number_text)}
 
-  #   cond do
-  #     symbol == nil -> {:undefined, symbol_name}
-  #     true -> {:symbol_value, {symbol.value, symbol.relocation}}
-  #   end
-  # end
-
-  def convert_token({:number, number_text}, _), do: {:value, Easm.Lexer.number_value(number_text)}
+  def convert_token({:octal_number, number_text}, _),
+    do: {:value, Lexer.number_value(number_text)}
 
   def convert_token({_type, _op} = token, _), do: token
 
