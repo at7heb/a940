@@ -41,7 +41,6 @@ defmodule LiteralsTest do
   end
 
   test "can add same literal..." do
-    "add same" |> dbg
     l0 = Easm.Literal.new(15)
     ls = Easm.Literals.new()
     a0 = {5, 1}
