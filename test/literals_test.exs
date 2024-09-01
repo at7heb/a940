@@ -73,4 +73,38 @@ defmodule LiteralsTest do
     assert a1 in ls1.used_at
     assert length(Map.to_list(ls1.map)) == 1
   end
+
+  test "can find defined but not known" do
+    l0 = Easm.Literal.new(nil)
+    l1 = Easm.Literal.new({299, 3})
+    l2 = Easm.Literal.new({1999, 0})
+    l3 = Easm.Literal.new(nil)
+    defn0 = [[number: 3], [operator: "*"], [label: "B"], [operator: "-"], [number: 1]]
+    defn1 = [[label: "ZZ"]]
+    defn2 = [[number: 21]]
+    defn3 = [[label: "ZZ"]]
+    ls = Easm.Literals.new()
+    assert length(Easm.Literals.get_defined_literal_definitions(ls)) == 0
+    a0 = {5, 1}
+    a1 = {10, 1}
+    a2 = {35, 1}
+    a3 = {36, 1}
+
+    ls1 =
+      ls
+      |> Easm.Literals.handle_literal(defn1, l1, a1)
+      |> Easm.Literals.handle_literal(defn2, l2, a2)
+
+    assert length(Easm.Literals.get_defined_literal_definitions(ls1)) == 0
+
+    ls2 =
+      ls1
+      |> Easm.Literals.handle_literal(defn0, l0, a0)
+      |> Easm.Literals.handle_literal(defn3, l3, a3)
+
+    defns = Easm.Literals.get_defined_literal_definitions(ls2)
+    defns |> dbg
+    assert length(defns) == 2
+    ls2 |> dbg
+  end
 end
